@@ -47,6 +47,8 @@ app.post('/newpatch', (req, res) => {
     console.log("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
     console.log("T:", T, "threshold: ", threshold)
     if (T <= threshold) {
+        //
+        R = meanT / numberOfHost
         console.log("ok")
         return res.send('ok')
     }
