@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller
+  labels:
+    kdd-component: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: controller
+  template:
+    metadata:
+      labels:
+        kdd-component: controller
+    spec:
+      containers:
+      - name: controller
+        image: 192.168.56.1:5000/controller
+        imagePullPolicy: Always
+#        ports:
+#        - containerPort: 5051

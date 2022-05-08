@@ -7,5 +7,5 @@ services:
       context: ..
       dockerfile: deployment/Dockerfile
     ports:
-    - 5050:5050
+    - 5060:5060
     network_mode: "host"

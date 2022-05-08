@@ -1,11 +1,13 @@
 const express = require('express');
 const app = express();
 
+
+
 const cors = require('cors')
 
-
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({
+    limit: '50mb',
     extended: true
   }));
 app.use(cors())
@@ -23,8 +25,16 @@ app.get('*', (req, res) => {
     To get analysist result, send a post request with flows to serviceip:serviceport/newpatch\n')
 })
 app.post('/newpatch', (req, res) => {
+    //lengthBefore = req.body.length
+    filterOnlyRequestTraffic(req.body)
+    
     //req.body is the input json
     T = req.body.length
+    
+    //if (T!= lengthBefore){
+    //    console.log("Really reduce ", lengthBefore, T)
+    //}
+
     //count number of each host
     hostStats = countHostsAppearance(req.body)
     numberOfHost = hostStats.size 
@@ -68,19 +78,27 @@ app.post('/newpatch', (req, res) => {
     res.send(suspectedHosts)
 })
 
-const PORT = 5050
+const PORT = 5060
 app.listen(PORT, () => console.log(`Server is listening on port ${PORT}`))
 
-
+function filterOnlyRequestTraffic(requestbody)
+{
+    for (var i=0; i < requestbody.length; i++) {
+        if (requestbody[i].is_reply==true){
+            requestbody.splice(i,1)
+            i--;
+        }
+    }
+}
 function countHostsAppearance(requestbody)
 {
     groupip = new Map([])
     for (i in requestbody) {
         host = requestbody[i]
-        if (!groupip.has(host.ip)) {
-            groupip.set(host.ip, 1)
+        if (!groupip.has(host.IP.source)) {
+            groupip.set(host.IP.source, 1)
         } else {
-            groupip.set(host.ip, groupip.get(host.ip) + 1)
+            groupip.set(host.IP.source, groupip.get(host.IP.source) + 1)
         }
     }
 
