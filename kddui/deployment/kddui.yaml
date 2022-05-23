@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kddui
+  labels:
+    kdd-component: kddui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: kddui
+  template:
+    metadata:
+      labels:
+        kdd-component: kddui
+    spec:
+      containers:
+      - name: kddui
+        image: 192.168.56.1:5000/kddui
+        imagePullPolicy: Always

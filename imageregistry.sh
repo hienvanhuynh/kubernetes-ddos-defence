@@ -1,21 +1,29 @@
 cd normaluser/deployment
 pwd
 docker-compose build
-docker push $REGISTRY/normal-user
+docker push 192.168.56.1:5000/normal-user
 cd ../../nodeserver
 pwd
 docker-compose build
-docker push $REGISTRY/nodeserver
+docker push 192.168.56.1:5000/nodeserver
 cd ../attacker/deployment
 pwd
 docker-compose build
-docker push $REGISTRY/attacker
-cd ../../controller/deployment
+docker push 192.168.56.1:5000/attacker
+cd ../../scraper/deployment
 pwd
 docker-compose build
-docker push $REGISTRY/controller
+docker push 192.168.56.1:5000/scraper
 cd ../../ddos-detection/deployment
 pwd
 docker-compose build
-docker push $REGISTRY/ddos-detection
-cd ../
+docker push 192.168.56.1:5000/ddos-detection
+cd ../../executor/deployment
+pwd
+docker-compose build
+docker push 192.168.56.1:5000/executor
+cd ../../kddui/deployment
+pwd
+docker-compose build
+docker push 192.168.56.1:5000/kddui
+cd ../..

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executor
+  labels:
+    kdd-component: executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: executor
+  template:
+    metadata:
+      labels:
+        kdd-component: executor
+    spec:
+      containers:
+      - name: executor
+        image: 192.168.56.1:5000/executor
+        imagePullPolicy: Always
+#        ports:
+#        - containerPort: 5051
