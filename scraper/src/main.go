@@ -58,7 +58,7 @@ func main() {
 
 		client.Set("newpatch", shortJsonStringFlow, -1)
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 4)
 	}
 }
 
@@ -80,26 +80,6 @@ func getPodName(namespace string, labels ...string) (result string) {
 	result, _ = execBashCommand(command)
 	return result
 }
-
-/*func execCommand(command string) (result string, err int) {
-    commandTokens := strings.Split(command, " ")
-	mainCommand, args := commandTokens[0], commandTokens[1:]
-	out, cmderr := exec.Command(mainCommand, args...).CombinedOutput()
-
-	if cmderr != nil {
-		fmt.Println(cmderr, ":", string(out))
-		fmt.Println("Command tokens:", commandTokens)
-		result = ""
-		err=1
-	} else {
-		result = string(out)
-		if result[0]=='"' {
-			result = result[1:][:len(result)-2]
-		}
-		err=0
-	}
-	return result, err
-}*/
 
 func execBashCommand(command string) (result string, err int) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()

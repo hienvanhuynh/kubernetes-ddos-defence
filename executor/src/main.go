@@ -54,7 +54,7 @@ func main() {
 					delete(listOfWatchingCcnp, ccnpName)
 					deleteCcnp(ccnpName)
 				} else {
-					listOfWatchingCcnp[ccnpName] = seconds + 3
+					listOfWatchingCcnp[ccnpName] = seconds + 2
 				}
 			}
 		}
@@ -85,7 +85,7 @@ func main() {
 			}
 		}
 		
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 2)
 	}
 }
 
