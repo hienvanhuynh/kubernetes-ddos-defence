@@ -1,29 +1,34 @@
+REGISTRY='192.168.56.1:5000'
 cd normaluser/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/normal-user
+docker push $REGISTRY/normal-user
 cd ../../nodeserver
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/nodeserver
+docker push $REGISTRY/nodeserver
 cd ../attacker/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/attacker
+docker push $REGISTRY/attacker
 cd ../../scraper/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/scraper
+docker push $REGISTRY/scraper
 cd ../../ddos-detection/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/ddos-detection
+docker push $REGISTRY/ddos-detection
 cd ../../executor/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/executor
+docker push $REGISTRY/executor
 cd ../../kddui/deployment
 pwd
 docker-compose build
-docker push 192.168.56.1:5000/kddui
+docker push $REGISTRY/kddui
+cd ../../python-attacker/deployment
+pwd
+docker-compose build
+docker push $REGISTRY/python-attacker
 cd ../..

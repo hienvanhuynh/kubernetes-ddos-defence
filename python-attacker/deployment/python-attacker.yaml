@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-attacker
+  labels:
+    machine: python-attacker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine: python-attacker
+  template:
+    metadata:
+      labels:
+        machine: python-attacker
+    spec:
+      containers:
+      - name: python-attacker
+        image: 192.168.56.1:5000/python-attacker
+        imagePullPolicy: Always

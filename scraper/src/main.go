@@ -2,15 +2,10 @@ package main
 
 import (
 	"fmt"
-	//"io/ioutil"
     "os/exec"
-	//"bytes"
 	"time"
-	//"net/http"
 	"strings"
 	"encoding/json"
-	"strconv"
-	"math/rand"
 	"github.com/go-redis/redis"
 )
 
@@ -41,76 +36,35 @@ func main() {
     	fmt.Println(err)
     }
 
-	/*out:= client.Set("apples", 25, -1)
-	fmt.Println(out)
-	
-	aout, aerr:=client.Get("apples").Result()
-	fmt.Println(aout, "; ", aerr)*/
-
 	numberOfLoop:=0;
 	for {
 		numberOfLoop++;
-		if numberOfLoop/30>(numberOfLoop-1)/30 {
-			fmt.Println("checked", numberOfLoop, "times")
-		}
+		//if numberOfLoop/30>(numberOfLoop-1)/30 {
+		//	fmt.Println("checked", numberOfLoop, "times")
+		//}
 		hubbleFlow := getHubbleFlow()
 		var mapFlow FlowFormat
 		json.Unmarshal([]byte(hubbleFlow), &mapFlow)
 		
 		for _, oneFlow := range mapFlow {
-			delete(oneFlow, "source")
-			delete(oneFlow, "destination")
 			delete(oneFlow, "node_name")
 			delete(oneFlow, "reply")
 			delete(oneFlow, "event_type")
 			delete(oneFlow, "Summary")
 			delete(oneFlow, "trace_observation_point")
-			delete(oneFlow, "verdict")
 		}
 
 		shortJsonStringFlow, _ := json.Marshal(mapFlow)
 
 		client.Set("newpatch", shortJsonStringFlow, -1)
 
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 }
 
-func isSeparatorInIPList(sep rune) (result bool) {
-	if sep=='[' || sep ==']' || sep=='"' {
-		return true
-	} else {
-		return false
-	}
-}
-func applyCnp(IP string) {
-	command := `cat <<EOF | kubectl apply -f -
-apiVersions: "cilium.io/v2"
-kind: CiliumNetworkPolicy
-metadata:
-  name: "cidr-rule`+strconv.Itoa(getNumberOfCnp()+rand.Intn(1000))+`"
-spec:
-  endpointSelector:
-    matchLabels:
-      app: myapp
-  ingress:
-  - fromCIDRSet:
-    - cidr: 0.0.0.0/0
-      except:
-      - `+IP+`/32
-EOF`
-	out, _ := execBashCommand(command);
-	fmt.Println(out)
-}
-func getNumberOfCnp() (result int) {
-	numberString, _ := execCommand("kubectl get cnp | wc -l")
-	numberOfCnp, _ := strconv.Atoi(numberString)
-
-	return numberOfCnp
-}
 func getHubbleFlow() (result string) {
-	command := "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble observe --since 3s -o json"
-	rawFlows, _ := execCommand(command)
+	command := "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble observe --since 10s -o json"
+	rawFlows, _ := execBashCommand(command)
 	splitedFlow := strings.Split(rawFlows, "\n")
 	
 	var formatedFlow = "[" + strings.Join(splitedFlow[1:][:len(splitedFlow)-2], ",\n")+"]"
@@ -123,11 +77,11 @@ func getPodName(namespace string, labels ...string) (result string) {
 		command = command + " -l " + label
 	}
 
-	result, _ = execCommand(command)
+	result, _ = execBashCommand(command)
 	return result
 }
 
-func execCommand(command string) (result string, err int) {
+/*func execCommand(command string) (result string, err int) {
     commandTokens := strings.Split(command, " ")
 	mainCommand, args := commandTokens[0], commandTokens[1:]
 	out, cmderr := exec.Command(mainCommand, args...).CombinedOutput()
@@ -145,7 +99,8 @@ func execCommand(command string) (result string, err int) {
 		err=0
 	}
 	return result, err
-}
+}*/
+
 func execBashCommand(command string) (result string, err int) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()
 	if cmderr != nil {

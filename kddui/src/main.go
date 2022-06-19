@@ -5,9 +5,10 @@ import (
     "net/http"
 	"strings"
 	"os/exec"
+	"encoding/json"
 )
-  
-type WatchingCNPs map[string]int
+
+type PolicyConfig map[string]interface{}
 func main() {
     fmt.Println("Listen on Port 7080")
     http.HandleFunc("/", homeGUI)
@@ -16,49 +17,90 @@ func main() {
 }
 
 func getBlockList(w http.ResponseWriter, r *http.Request) {
-	cnpList := getCnpList()
-	response := ""
-	for _, cnp := range cnpList {
-		if len(response)!=0 {
-			response+="\n"
-		}
-		response += cnp
-	}
+	policyList := getCcnpList()
+	fmt.Println("blocked flows:", policyList)
+	
+	response, _ := json.Marshal(policyList)
 
-	fmt.Fprintf(w, response)
+	fmt.Fprintf(w, string(response))
 }
 func homeGUI(w http.ResponseWriter, r *http.Request) {
 
 	htmlResponse := `
 	<!DOCTYPE html>
-<html>
-<head>
-
-<head>
-<body>
-    <h1>Kubernetes DDOS Defence UI</h1>
-    <p>UI version: 1.0.0</p>
-    Blocking IPs:
-    <ul>
+	<html>
+	<head>
+	
+	<style>
+	body {
+		margin:0;
+	}
+	*, *:before, *:after {
+		box-sizing: border-box;
+	}
+	.wrapper {
+		border: 5px;
+	}
+	li {
+		background-color: white;
+		padding:10px;
+	}
+	li:nth-child(odd) {
+		background-color: #d0e9f7;
+	}
+	li:nth-child(even) {
+		background-color: #FFFFFF;
+	}
+	.light-sep {
+	  border: 2px solid #EEEEEE;
+	  border-radius: 2px;
+	  height: 2px;
+	  width:90%%;
+	  left:5%%;
+	  position: relative;
+	  top: 20px;
+	}
+	</style>
+	<head>
+	<body style="overflow:hidden;">
+		
+		<div style="position: absolute; width:100%%; height: 10%%; background-color:#BCF; box-shadow:0px 0px 3px 3px #BCF; display: flex; justify-content: left; align-items: center;">
+		<h1>Kubernetes DDOS Defence UI</h1>
+		</div>
+		<div style="position: absolute; width:99%%; height:90%%; left:0.5%%; top:11%%; border-radius:10px; background-color: #FFFFFF; box-shadow: 0px 0px 5px 5px #DDDDDD; overflow: hidden;">
+	
+		<div style="position: relative; left:10px; top:10px; height:20px; display: flex; align-items: center;">Blocking Flows:
+		</div>
+		<div class="light-sep" style=""></div>
+		<div style="position: relative; top:20px; height:90%%; overflow: hidden; overflow-y: scroll; background-color: #FFFFFF; margin: 0; padding: 0;">
+		<ul style="list-style-type: none; margin: 0; padding: 0;">
 	`
-	cnpList := getCnpList()
+	policyList := getCcnpList()
+	fmt.Println(policyList)
+	for id, policy := range policyList {
+		fmt.Println(id, policy)
+		policyJson, _ := json.Marshal(policy)
 
-	for _, cnp := range cnpList {
-		htmlResponse+="<li>"+cnp+"</li>"
+		htmlResponse+="<li>"+string(policyJson)+"</li>"
 	}
 
-	htmlResponse+=`    </ul>
-	</body>
-	</html>`
+	htmlResponse+=`        </ul>
+    </div>
+    </div>
+</body>
+</html>`
 
     fmt.Fprintf(w, htmlResponse)
 }
 
-func getCnpList() (cnpList []string) {
-	command := "kubectl -n kube-system get cnp -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'"
-	cnpsString, _ := execBashCommand(command)
-	cnpList = strings.Split(cnpsString, "\n")
-	return cnpList
+func getCcnpList() (policyListJson []map[string]interface{}) {
+	//command := "kubectl -n kube-system get cnp -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'"
+	command := "kubectl get ccnp -o jsonpath='{range .items[*]}{.metadata.annotations.kubectl\\.kubernetes\\.io/last-applied-configuration}{end}'"
+	policiesString, _ := execBashCommand(command)
+	policyListOpenJsonStr := "[" + strings.Replace(policiesString, "\n", ",", -1)
+	policyListCloseJsonStr := policyListOpenJsonStr[:len(policyListOpenJsonStr)-1] + "]"
+	json.Unmarshal([]byte(policyListCloseJsonStr), &policyListJson)
+	return policyListJson
 }
 func execBashCommand(command string) (result string, err int) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()

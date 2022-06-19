@@ -1,6 +1,6 @@
 # kubernetes-ddos-defence
 ## Build images and push to registry<br />
-### Change environment variable `$REGISTRY` in `.env` file<br />
+### Change environment variable `$REGISTRY` in `./imageregistry.sh` file<br />
 ### Then run<br />
 >./imageregistry.sh<br />
 

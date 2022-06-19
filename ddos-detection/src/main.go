@@ -4,20 +4,23 @@ import (
 	"fmt"
 	//"io/ioutil"
     "os/exec"
-	"bytes"
+	//"bytes"
 	"time"
+	"reflect"
 	//"net/http"
 	"strings"
 	"encoding/json"
 	"strconv"
 	"math/rand"
 	"math"
+	//"os"
 	"github.com/go-redis/redis"
 )
 
-type FlowFormat []map[string]interface{}
-type SimpleMapFormat map[string]interface{}
-type HostStats map[string]int
+type FlowsFormat []FlowFormat
+type FlowFormat map[string]interface{}
+//index is which flow this is pointing to, value is the counted appearance number
+type FlowsStats map[int]int
 
 func main() {
 	fmt.Println("Working")
@@ -38,10 +41,17 @@ func main() {
     	fmt.Println(err)
     }
 	var meanT float64 = 0
-	var standardDeviation float64=0
+	var standardDeviation float64 = 0
 	var alpha float64 = 0.08
 
-	var maxAttackHostsRatio float64 = 0.2
+	//In case stdDev is low, we use this number to keep it not too low
+	var standardDeviationBias float64 = 5
+	//Every user may as the same time increase 5 access, then we tolerate them
+	var tolerationTrafficIncreasementBias float64 = 5
+	//var numberOfDnsService = 1
+
+	var maxAttackHostsRatio float64 = 0.1
+	//Usual traffic of a client
 	var R float64 = 0
 	
 	numberOfLoop:=0;
@@ -51,103 +61,140 @@ func main() {
 			fmt.Println("checked", numberOfLoop, "times")
 		}
 		
-		hubbleFlow, _ := client.Get("newpatch").Result()
-		var mapFlow FlowFormat
-		json.Unmarshal([]byte(hubbleFlow), &mapFlow)
+		hubbleFlows, _ := client.Get("newpatch").Result()
+		var mapFlows FlowsFormat
+		json.Unmarshal([]byte(hubbleFlows), &mapFlows)
 		
 		//phase 1
 		//lengthBefore := float64(len(mapFlow))
-		mapFlow = filterOnlyRequestTraffic(mapFlow)
+		mapFlows = filterOnlyRequestTraffic(mapFlows)
     
 		//req.body is the input json
-		var T float64 = float64(len(mapFlow))
+		var T float64 = float64(len(mapFlows))
 	
 		//count number of each host
-		hostStats := countHostsAppearance(mapFlow)
-		numberOfHost := len(hostStats)
-		fmt.Println(hostStats)
+		flowsStats := countHostsAppearance(mapFlows)
+		numberOfFlow := len(flowsStats)
+		fmt.Println(flowsStats)
 		
 		//for first scrape, we don't know meanT
 		if meanT==0 { meanT = T}
 		if (R == 0) {
-			R = meanT/float64(numberOfHost)
+			R = meanT/float64(numberOfFlow)
 			fmt.Println("R: ", R)
 		}
-		fmt.Println("meanT:", meanT, " stdDev:", standardDeviation)    
-		//Phase 1
+		//fmt.Println("meanT:", meanT, " stdDev:", standardDeviation)    
+		//Phase 1 identify there are unexpected hight traffic
+		//save StandardDeviation for phase 1.1
+		tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
+		if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
+			tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
+		}
 		newMeanT := meanT + alpha * (T - meanT)
 		newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
-		meanT = newMeanT
-		standardDeviation = newStandardDeviation
-		threshold := meanT + 3 * standardDeviation
+		threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
 	
 		//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
-		fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
+		//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
 		haveSuspected:=true
-		if (T <= threshold) {
+		//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
+		if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
 			//
-			R = meanT / float64(numberOfHost)
-			fmt.Println("ok")
+			meanT = newMeanT
+			standardDeviation = newStandardDeviation
+			R = meanT / float64(numberOfFlow)
+			//fmt.Println("ok")
 			haveSuspected = false
-			//return res.send('ok')
 		}
-	
-		//Phase 2
-		var suspectedHosts string
+
+		//Phase 2 filter the highest possible attack flow
+		var suspectedFlows FlowsFormat
 		if (haveSuspected) {
 			fmt.Println("possible attack detected")
-			//
-			//m
-			attackTrafficsRatio := (T - (1-maxAttackHostsRatio) * float64(numberOfHost) * R) / (maxAttackHostsRatio * float64(numberOfHost) * R)
+			//A
+			numberOfAttackFlow := maxAttackHostsRatio * float64(numberOfFlow)
+			if numberOfAttackFlow < 1 { numberOfAttackFlow = 1 }
+			//Each traffic caused by attacker will create a similar dns flow
+			//So we must add this to make the argorithm works correctly
+			numberOfAttackFlow = numberOfAttackFlow * 2
 			//mR
-			minAttackTraffics := int(attackTrafficsRatio * R)
+			minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
 			fmt.Println("minAttackTraffic:", minAttackTraffics)
-			suspectedHosts = getSuspectedHosts(hostStats, minAttackTraffics)    
-			client.Set("suspected", suspectedHosts, -1)
+			suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+			
+			if len(suspectedFlows) == 0 {
+				meanT = newMeanT
+				standardDeviation = newStandardDeviation
+				R = meanT / float64(numberOfFlow)	
+			} else {
+				fmt.Println("Attack confirmed")
+				suspectedFlowsJson, _ := json.Marshal(suspectedFlows)
+				fmt.Println(string(suspectedFlowsJson))
+				client.Set("suspected", string(suspectedFlowsJson), -1)
+			}
 		}
 		
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 }
-func getSuspectedHosts(hostStats HostStats, minAttackTraffics int) (listSuspectedHosts string) {
-	listSuspectedHosts = ""
-	var buffer bytes.Buffer
 
-	for host, freq := range hostStats {
+func (flow1 FlowFormat) Equals(flow2 FlowFormat) bool {
+	if reflect.DeepEqual(flow1["IP"], flow2["IP"]) && 
+		reflect.DeepEqual(flow1["source"].(map[string]interface{})["labels"], flow2["source"].(map[string]interface{})["labels"]) {
+			return true
+	}
+	return false
+}
+
+func getSuspectedFlows(flows FlowsFormat, flowsStats FlowsStats, minAttackTraffics int) (listSuspectedFlows FlowsFormat) {
+	listSuspectedFlows=FlowsFormat{}
+	//var buffer bytes.Buffer
+	for flowIndex, freq := range flowsStats {
         if (freq >= minAttackTraffics) {
-			buffer.WriteString(host+",")
+			listSuspectedFlows = append(listSuspectedFlows, flows[flowIndex])
+			//buffer.WriteString(host+",")
 			//listSuspectedHosts=listSuspectedHosts + host + ","
         }
     }
-	listSuspectedHosts = buffer.String()
-	lenListSuspectedHosts := len(listSuspectedHosts)
-	if lenListSuspectedHosts > 0 {
-		listSuspectedHosts = listSuspectedHosts[:lenListSuspectedHosts-1]
-	}
-	return listSuspectedHosts
+	//listSuspectedHosts = buffer.String()
+	//lenListSuspectedFlows := len(listSuspectedFlows)
+	//To delete the last comma
+	//if lenListSuspectedHosts > 0 {
+	//	listSuspectedHosts = listSuspectedHosts[:lenListSuspectedHosts-1]
+	//}
+	return listSuspectedFlows
 }
-func countHostsAppearance(mapFlow FlowFormat) (result HostStats) {
-	result=HostStats{}
-	for _, oneFlow := range mapFlow {
-		IP := oneFlow["IP"].(map[string]interface{})["source"].(string)
-		if count, isInTheMap := result[IP]; isInTheMap {
-			result[IP]=count + 1
-		} else {
-			result[IP]=1
+func countHostsAppearance(mapFlows FlowsFormat) (result FlowsStats) {
+	result=FlowsStats{}
+	for oneFlowIndex, oneFlow := range mapFlows {
+		found := false
+		for indexFlow, numberAppearance := range result {
+			if mapFlows[indexFlow].Equals(oneFlow) {
+				result[indexFlow] = numberAppearance+1
+				found = true
+				break
+			}
 		}
+		if found==true {
+			continue
+		}
+		result[oneFlowIndex] = 1
 	}
 	return result
 }
 
-func filterOnlyRequestTraffic(mapFlow FlowFormat) (result FlowFormat) {
-	lastIndex := len(mapFlow) - 1
-	for index, oneFlow := range mapFlow {
+func filterOnlyRequestTraffic(mapFlows FlowsFormat) (result FlowsFormat) {
+	lastIndex := len(mapFlows) - 1
+	for index, oneFlow := range mapFlows {
 		if oneFlow["is_reply"]==true {
-			mapFlow[index]=mapFlow[lastIndex]
+			mapFlows[index]=mapFlows[lastIndex]
 			lastIndex=lastIndex-1	
+		} else if oneFlow["verdict"]=="DROPPED" {
+			mapFlows[index]=mapFlows[lastIndex]
+			lastIndex=lastIndex-1
 		}
 	}
-	return mapFlow[:(lastIndex+1)]
+	return mapFlows[:(lastIndex+1)]
 }
 
 func isSeparatorInIPList(sep rune) (result bool) {

@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kddui
+spec:
+  selector:
+    kdd-component: kddui
+  type: NodePort
+  ports:
+   - port: 7080
+     nodePort: 32080
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,6 +26,7 @@ spec:
       labels:
         kdd-component: kddui
     spec:
+      serviceAccountName: kdd-admin
       containers:
       - name: kddui
         image: 192.168.56.1:5000/kddui

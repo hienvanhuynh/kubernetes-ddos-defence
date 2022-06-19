@@ -5,6 +5,7 @@ import (
 	//"io/ioutil"
     "os/exec"
 	//"bytes"
+	"encoding/json"
 	"time"
 	//"net/http"
 	"strings"
@@ -13,14 +14,16 @@ import (
 	"github.com/go-redis/redis"
 )
 var MAX_CNP_TIME_TO_LIVE=300
-
-type FlowFormat []map[string]interface{}
+type FlowsFormat []FlowFormat
+type FlowFormat map[string]interface{}
+//type FlowFormat []map[string]interface{}
 //key: CNP name
 //value: time lived
-type WatchingCNPs map[string]int
+type WatchingCCNPs map[string]int
 func main() {
 	fmt.Println("Working")
-	
+	rand.Seed(time.Now().UnixNano())
+
 	var (
     	redisUrl     = "redis.kube-system.svc.cluster.local:6379"
     	password = ""
@@ -37,66 +40,67 @@ func main() {
     	fmt.Println(err)
     }
 
-	var listOfWatchingCnp = WatchingCNPs{}
+	var listOfWatchingCcnp = WatchingCCNPs{}
 	numberOfLoop:=0;
 	for {
 		numberOfLoop++;
 		if numberOfLoop/30>(numberOfLoop-1)/30 {
 			fmt.Println("checked", numberOfLoop, "times")
 		}
-
-		//Check if old cnp exists, delete it
-		for cnpName, seconds := range listOfWatchingCnp {
-			if seconds > MAX_CNP_TIME_TO_LIVE {
-				delete(listOfWatchingCnp, cnpName)
-				deleteCnp(cnpName)
-			} else {
-				listOfWatchingCnp[cnpName] = seconds + 3
+		if len(listOfWatchingCcnp) > 0 {
+			//Check if old cnp exists, delete it
+			for ccnpName, seconds := range listOfWatchingCcnp {
+				if seconds > MAX_CNP_TIME_TO_LIVE {
+					delete(listOfWatchingCcnp, ccnpName)
+					deleteCcnp(ccnpName)
+				} else {
+					listOfWatchingCcnp[ccnpName] = seconds + 3
+				}
 			}
-		}
-		//detect new cnp
-		updateNewCnpToWatchingList(&listOfWatchingCnp)
-
-		//get suspected and apply cnp
-		suspectedString, err := client.Get("suspected").Result()
-		client.Del("suspected")
-		fmt.Println(suspectedString)
-		if err!=nil {
-			time.Sleep(time.Second * 3)
-			continue
-		}
-		var suspectedIPs []string
-		if len(suspectedString) > 0 {
-			suspectedIPs = strings.Split(suspectedString, ",")
-		} else {
-			time.Sleep(time.Second * 3)
-			continue
-		}
-
-		for _, IP := range suspectedIPs {
-			if IP=="" || IP==" " {
-				continue
-			}
-			fmt.Println("Blocking IP:", IP)
-			applyCnp(IP)
 		}
 		
-		time.Sleep(time.Second * 3)
+		//detect new cnp
+		updateNewCcnpToWatchingList(&listOfWatchingCcnp)
+
+		//get suspected and apply cnp
+		suspectedFlowsString, err := client.Get("suspected").Result()
+		var suspectedFlows FlowsFormat
+		json.Unmarshal([]byte(suspectedFlowsString), &suspectedFlows)
+		
+		//suspectedString, err := client.Get("suspected").Result()
+		haveSuspected := true
+		//fmt.Println(suspectedString)
+		if err!=nil {
+			haveSuspected = false
+		} else if len(suspectedFlows) <= 0 {
+			haveSuspected = false
+		}
+
+		if haveSuspected == true {
+			client.Del("suspected")
+
+			for _, flow := range suspectedFlows {
+				fmt.Println("Blocking flow:", flow)
+				applyCcnp(flow)
+			}
+		}
+		
+		time.Sleep(time.Second * 5)
 	}
 }
 
-func updateNewCnpToWatchingList(listOfWatchingCnp *WatchingCNPs) {
-	getCNPCommand := "kubectl get cnp --template '{{range .items}}{{.metadata.name}}{{\"\\n\"}}{{end}}' | grep cidr-rule"
-	cnpsString, _ := execBashCommand(getCNPCommand)
-	cnps := strings.Split(cnpsString, "\n")
-	for _, cnp := range cnps {
-		if cnp == "" {
+func updateNewCcnpToWatchingList(listOfWatchingCcnp *WatchingCCNPs) {	
+	getCCNPCommand := "kubectl get ccnp --template '{{range .items}}{{.metadata.name}}{{\"\\n\"}}{{end}}' | grep blacklist-rule"
+	ccnpsString, _ := execBashCommand(getCCNPCommand)
+	ccnps := strings.Split(ccnpsString, "\n")
+	for _, ccnp := range ccnps {
+		if ccnp == "" {
 			continue
 		}
-		if _, ok := (*listOfWatchingCnp)[cnp]; ok {
+		if _, ok := (*listOfWatchingCcnp)[ccnp]; ok {
 			//Do nothing
 		} else {
-			(*listOfWatchingCnp)[cnp] = 0
+			(*listOfWatchingCcnp)[ccnp] = 0
 		}
 	}
 }
@@ -108,60 +112,86 @@ func isSeparatorInIPList(sep rune) (result bool) {
 		return false
 	}
 }
-func deleteCnp(cnpName string) {
-	command:="kubectl delete cnp "+cnpName
+func deleteCcnp(ccnpName string) {
+	command:="kubectl delete ccnp "+ccnpName
 	execBashCommand(command)
 }
-func applyCnp(IP string) {
-	numberOfCnp := getNumberOfCnpInString()
+func applyCcnp(flow FlowFormat) {
+	unidentifiedFlow := false
+	numberOfCcnp := getNumberOfCcnpInString()
 	randValue := strconv.Itoa(100+rand.Intn(900))
 	command := `cat <<EOF | kubectl apply -f -
-apiVersion: "cilium.io/v2"
-kind: CiliumNetworkPolicy
+apiVersion: 'cilium.io/v2'
+kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: "cidr-rule`+numberOfCnp+randValue+`"
+  name: "blacklist-rule`+numberOfCcnp+randValue+`"
 spec:
   endpointSelector:
-    matchLabels:
-      app: myapp
+    matchLabels:`
+	for _, label := range flow["destination"].(map[string]interface{})["labels"].([]interface{}) {
+		if label.(string)[:4] == "k8s:" {
+			realLabel := label.(string)[4:]
+			if !strings.Contains(realLabel, "=") {
+				unidentifiedFlow=true
+				break
+			} else {
+				realLabel = strings.Replace(realLabel, "=", ": ", -1)
+			}
+			command += `
+      `+realLabel
+			fmt.Println(realLabel)
+		} else {
+			unidentifiedFlow=true
+			break
+		}
+	}
+	command +=`
+  ingressDeny:
+  - fromEndpoints:
+    - matchLabels:`
+	for _, label := range flow["source"].(map[string]interface{})["labels"].([]interface{}) {
+		if label.(string)[:4] == "k8s:" {
+			realLabel := label.(string)[4:]
+			if !strings.Contains(realLabel, "=") {
+				unidentifiedFlow=true
+				break
+			} else {
+				realLabel = strings.Replace(realLabel, "=", ": ", -1)
+			}
+			command += `
+        `+realLabel
+			fmt.Println(realLabel)	  
+		} else {
+			unidentifiedFlow=true
+			break
+		}
+		if strings.Contains(label.(string), "reserved:") {
+			unidentifiedFlow = true
+			break
+		}
+	}
+	command +=`
   ingress:
-  - fromCIDRSet:
-    - cidr: 0.0.0.0/0
-      except:
-      - `+IP+`/32
+  - fromEntities:
+    - "all"
 EOF`
+	if unidentifiedFlow==true {
+		fmt.Println("Detect attacker is from outside of cluster:", flow["IP"].(map[string]interface{})["source"].(string))
+		return
+	}
 	out, _ := execBashCommand(command);
 	fmt.Println(out)
 }
-func getNumberOfCnpInString() (numberOfCnp string) {
-	numberOfCnp, _ = execBashCommand("kubectl get cnp | wc -l")
+func getNumberOfCcnpInString() (numberOfCcnp string) {
+	numberOfCcnp, _ = execBashCommand("kubectl get ccnp | wc -l")
 	//remove unknown character (looks like a space char but it is not) in the last
-	numberOfCnp=numberOfCnp[:len(numberOfCnp)-1]
-	if (numberOfCnp[0] < '0' || numberOfCnp[0] > '9') {
-		numberOfCnp="0"
+	numberOfCcnp=numberOfCcnp[:len(numberOfCcnp)-1]
+	if (numberOfCcnp[0] < '0' || numberOfCcnp[0] > '9') {
+		numberOfCcnp="0"
 	}
-	return numberOfCnp
+	return numberOfCcnp
 }
 
-func execCommand(command string) (result string, err int) {
-    commandTokens := strings.Split(command, " ")
-	mainCommand, args := commandTokens[0], commandTokens[1:]
-	out, cmderr := exec.Command(mainCommand, args...).CombinedOutput()
-
-	if cmderr != nil {
-		fmt.Println(cmderr, ":", string(out))
-		fmt.Println("Command tokens:", commandTokens)
-		result = ""
-		err=1
-	} else {
-		result = string(out)
-		if result[0]=='"' {
-			result = result[1:][:len(result)-2]
-		}
-		err=0
-	}
-	return result, err
-}
 func execBashCommand(command string) (result string, err int) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()
 	if cmderr != nil {
@@ -170,7 +200,7 @@ func execBashCommand(command string) (result string, err int) {
 		err=1
 	} else {
 		result = string(out)
-		if result[0]=='"' {
+		if len(result) > 0 && result[0]=='"' {
 			result = result[1:][:len(result)-2]
 		}
 		err=0

@@ -8,10 +8,10 @@ prevTimeInSeconds=Math.floor(Date.now()/milisecondsPerRequest)
 while (true) {
   currentTimeInSeconds=Math.floor(Date.now()/milisecondsPerRequest)
   r=Math.floor(Math.random() * 100)
-  userWantToRequest=! (r % 3)
+  userWantToRequest=(r % 5) > 1
   if (currentTimeInSeconds > prevTimeInSeconds) {
+    prevTimeInSeconds = currentTimeInSeconds;
     if (userWantToRequest) {
-      prevTimeInSeconds = currentTimeInSeconds;
       exec(`curl ${serviceurl}`)
       numberOfRequestsSent += 1
       console.log('sent', numberOfRequestsSent, 'request')
