@@ -119,8 +119,10 @@ func deleteCcnp(ccnpName string) {
 }
 func applyCcnp(flow FlowFormat) {
 	unidentifiedFlow := false
+	worldFlow := false
 	numberOfCcnp := getNumberOfCcnpInString()
 	randValue := strconv.Itoa(100+rand.Intn(900))
+
 	command := `cat <<EOF | kubectl apply -f -
 apiVersion: 'cilium.io/v2'
 kind: CiliumClusterwideNetworkPolicy
@@ -167,7 +169,7 @@ spec:
 			break
 		}
 		if strings.Contains(label.(string), "reserved:") {
-			unidentifiedFlow = true
+			worldFlow = true
 			break
 		}
 	}
@@ -176,8 +178,48 @@ spec:
   - fromEntities:
     - "all"
 EOF`
+
+	if worldFlow == true {
+		command = `cat <<EOF | kubectl apply -f -
+apiVersion: 'cilium.io/v2'
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: "blacklist-rule`+numberOfCcnp+randValue+`"
+spec:
+  endpointSelector:
+    matchLabels:`
+		for _, label := range flow["destination"].(map[string]interface{})["labels"].([]interface{}) {
+			if label.(string)[:4] == "k8s:" {
+				realLabel := label.(string)[4:]
+				if !strings.Contains(realLabel, "=") {
+					unidentifiedFlow=true
+					break
+				} else {
+					realLabel = strings.Replace(realLabel, "=", ": ", -1)
+				}
+				command += `
+      `+ realLabel
+				fmt.Println(realLabel)
+			} else {
+				unidentifiedFlow=true
+				break
+			}
+		}
+		command +=`
+  ingressDeny:
+  - fromCIDR:`
+		externalIP := flow["IP"].(map[string]interface{})["source"].(string)
+		command += `
+    - ` + externalIP + `/32`
+	}
+	command +=`
+  ingress:
+  - fromEntities:
+    - "all"
+EOF`
+
 	if unidentifiedFlow==true {
-		fmt.Println("Detect attacker is from outside of cluster:", flow["IP"].(map[string]interface{})["source"].(string))
+		fmt.Println("unknown attack flow")
 		return
 	}
 	out, _ := execBashCommand(command);
