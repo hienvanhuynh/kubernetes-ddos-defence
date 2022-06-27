@@ -64,25 +64,25 @@ func main() {
 		
 		hubbleFlows, _ := client.Get("newpatch").Result()
 		patchid, _ := client.Get("patchid").Result()
-
-		if savedPatchId != patchid {
+		var mapFlows FlowsFormat
+		json.Unmarshal([]byte(hubbleFlows), &mapFlows)
+		
+		//phase 1
+		//lengthBefore := float64(len(mapFlow))
+		mapFlows = filterMainTraffic(mapFlows)
+		mapFlows = filterMainTraffic(mapFlows)
+		//req.body is the input json
+		var T float64 = float64(len(mapFlows))
+		if savedPatchId != patchid && T > 0 {
 			savedPatchId = patchid
 			//Start to analyze
-			var mapFlows FlowsFormat
-			json.Unmarshal([]byte(hubbleFlows), &mapFlows)
 			
-			//phase 1
-			//lengthBefore := float64(len(mapFlow))
-			mapFlows = filterOnlyRequestTraffic(mapFlows)
-		
-			//req.body is the input json
-			var T float64 = float64(len(mapFlows))
-		
 			//count number of each host
 			flowsStats := countHostsAppearance(mapFlows)
 			numberOfFlow := len(flowsStats)
-			fmt.Println(flowsStats)
 			
+			fmt.Println(flowsStats)
+
 			//for first scrape, we don't know meanT
 			if meanT==0 { meanT = T}
 			if (R == 0) {
@@ -109,7 +109,6 @@ func main() {
 				meanT = newMeanT
 				standardDeviation = newStandardDeviation
 				R = meanT / float64(numberOfFlow)
-				//fmt.Println("ok")
 				haveSuspected = false
 			}
 	
@@ -190,15 +189,28 @@ func countHostsAppearance(mapFlows FlowsFormat) (result FlowsStats) {
 	return result
 }
 
-func filterOnlyRequestTraffic(mapFlows FlowsFormat) (result FlowsFormat) {
+func filterMainTraffic(mapFlows FlowsFormat) (result FlowsFormat) {
 	lastIndex := len(mapFlows) - 1
 	for index, oneFlow := range mapFlows {
 		if oneFlow["is_reply"]==true {
 			mapFlows[index]=mapFlows[lastIndex]
 			lastIndex=lastIndex-1	
-		} else if oneFlow["verdict"]=="DROPPED" {
-			mapFlows[index]=mapFlows[lastIndex]
-			lastIndex=lastIndex-1
+		} else {
+			is_ingress := false
+			for _, label := range oneFlow["source"].(map[string]interface{})["labels"].([]interface{}) {
+				if label.(string) == "k8s:app.kubernetes.io/instance=ingress-nginx" || label.(string) == "k8s:app.kubernetes.io/name=ingress-nginx" {
+						is_ingress = true
+						break
+					}
+				if strings.Contains(label.(string), "ingress-nginx") {
+					is_ingress = true
+					break
+				}
+			}
+			if is_ingress == true {
+				mapFlows[index]=mapFlows[lastIndex]
+				lastIndex=lastIndex-1
+			}
 		}
 	}
 	return mapFlows[:(lastIndex+1)]
