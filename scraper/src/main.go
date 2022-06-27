@@ -64,7 +64,7 @@ func main() {
 		if patchid > MAX_PATCH_ID {
 			patchid = MIN_PATCH_ID
 		}
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 }
 
@@ -76,7 +76,7 @@ func getHubbleFlow() (result string) {
 		fmt.Println("WARNING: No hubble relay detected, may not work correctly")
 	}
 	//Get flow
-	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 3.5s --verdict FORWARDED -o json"
+	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 5.5s --verdict FORWARDED -o json"
 	rawFlows, _ := execBashCommand(command)
 	splitedFlow := strings.Split(rawFlows, "\n")
 	
