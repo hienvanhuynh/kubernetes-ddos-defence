@@ -12,6 +12,9 @@ import (
 type FlowFormat []map[string]interface{}
 func main() {
 	fmt.Println("Working")
+	MIN_PATCH_ID := 0
+	MAX_PATCH_ID := 100000000
+	patchid := MIN_PATCH_ID
 	//detectionUrl := "http://ddos-detection.kube-system.svc.cluster.local:5060/newpatch"
 	
 	// Create Redis Client
@@ -46,24 +49,34 @@ func main() {
 		var mapFlow FlowFormat
 		json.Unmarshal([]byte(hubbleFlow), &mapFlow)
 		
-		for _, oneFlow := range mapFlow {
-			delete(oneFlow, "node_name")
-			delete(oneFlow, "reply")
-			delete(oneFlow, "event_type")
-			delete(oneFlow, "Summary")
-			delete(oneFlow, "trace_observation_point")
-		}
+		//for _, oneFlow := range mapFlow {
+		//	delete(oneFlow, "node_name")
+		//	delete(oneFlow, "reply")
+		//	delete(oneFlow, "event_type")
+		//	delete(oneFlow, "Summary")
+		//	delete(oneFlow, "trace_observation_point")
+		//}
 
 		shortJsonStringFlow, _ := json.Marshal(mapFlow)
-
 		client.Set("newpatch", shortJsonStringFlow, -1)
-
-		time.Sleep(time.Second * 4)
+		client.Set("patchid", patchid, -1)
+		patchid += 1
+		if patchid > MAX_PATCH_ID {
+			patchid = MIN_PATCH_ID
+		}
+		time.Sleep(time.Second * 3)
 	}
 }
 
 func getHubbleFlow() (result string) {
-	command := "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble observe --since 10s -o json"
+	//Get hubble relay server
+	command := "kubectl -n kube-system get svc hubble-relay -o jsonpath='{.spec.clusterIP}'"
+	hubbleRelayIP, err := execBashCommand(command)
+	if err != 0 || hubbleRelayIP == "" {
+		fmt.Println("WARNING: No hubble relay detected, may not work correctly")
+	}
+	//Get flow
+	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 3.5s --verdict FORWARDED -o json"
 	rawFlows, _ := execBashCommand(command)
 	splitedFlow := strings.Split(rawFlows, "\n")
 	
