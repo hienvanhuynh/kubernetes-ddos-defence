@@ -63,22 +63,23 @@ func main() {
 		updateNewCcnpToWatchingList(&listOfWatchingCcnp)
 
 		//get suspected and apply cnp
-		suspectedFlowsString, err := client.Get("suspected").Result()
+		haveSuspected := true
+		
+		suspectedFlowsString, err := client.LPop("suspected").Result()
+		if err != nil || suspectedFlowsString == "" {
+			haveSuspected = false
+		}
+
 		var suspectedFlows FlowsFormat
 		json.Unmarshal([]byte(suspectedFlowsString), &suspectedFlows)
 		
 		//suspectedString, err := client.Get("suspected").Result()
-		haveSuspected := true
 		//fmt.Println(suspectedString)
-		if err!=nil {
-			haveSuspected = false
-		} else if len(suspectedFlows) <= 0 {
+		if len(suspectedFlows) <= 0 {
 			haveSuspected = false
 		}
 
 		if haveSuspected == true {
-			client.Del("suspected")
-
 			for _, flow := range suspectedFlows {
 				fmt.Println("Blocking flow:", flow)
 				applyCcnp(flow)

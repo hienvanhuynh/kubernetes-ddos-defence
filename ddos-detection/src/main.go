@@ -54,7 +54,8 @@ func main() {
 	//Usual traffic of a client
 	var R float64 = 0
 	
-	numberOfLoop:=0;
+	savedPatchId := "-1"
+	numberOfLoop := 0;
 	for {
 		numberOfLoop++;
 		if numberOfLoop/30>(numberOfLoop-1)/30 {
@@ -62,79 +63,85 @@ func main() {
 		}
 		
 		hubbleFlows, _ := client.Get("newpatch").Result()
-		var mapFlows FlowsFormat
-		json.Unmarshal([]byte(hubbleFlows), &mapFlows)
-		
-		//phase 1
-		//lengthBefore := float64(len(mapFlow))
-		mapFlows = filterOnlyRequestTraffic(mapFlows)
-    
-		//req.body is the input json
-		var T float64 = float64(len(mapFlows))
-	
-		//count number of each host
-		flowsStats := countHostsAppearance(mapFlows)
-		numberOfFlow := len(flowsStats)
-		fmt.Println(flowsStats)
-		
-		//for first scrape, we don't know meanT
-		if meanT==0 { meanT = T}
-		if (R == 0) {
-			R = meanT/float64(numberOfFlow)
-			fmt.Println("R: ", R)
-		}
-		//fmt.Println("meanT:", meanT, " stdDev:", standardDeviation)    
-		//Phase 1 identify there are unexpected hight traffic
-		//save StandardDeviation for phase 1.1
-		tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
-		if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
-			tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
-		}
-		newMeanT := meanT + alpha * (T - meanT)
-		newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
-		threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
-	
-		//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
-		//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
-		haveSuspected:=true
-		//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
-		if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
-			//
-			meanT = newMeanT
-			standardDeviation = newStandardDeviation
-			R = meanT / float64(numberOfFlow)
-			//fmt.Println("ok")
-			haveSuspected = false
-		}
+		patchid, _ := client.Get("patchid").Result()
 
-		//Phase 2 filter the highest possible attack flow
-		var suspectedFlows FlowsFormat
-		if (haveSuspected) {
-			fmt.Println("possible attack detected")
-			//A
-			numberOfAttackFlow := maxAttackHostsRatio * float64(numberOfFlow)
-			if numberOfAttackFlow < 1 { numberOfAttackFlow = 1 }
-			//Each traffic caused by attacker will create a similar dns flow
-			//So we must add this to make the argorithm works correctly
-			numberOfAttackFlow = numberOfAttackFlow * 2
-			//mR
-			minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
-			fmt.Println("minAttackTraffic:", minAttackTraffics)
-			suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+		if savedPatchId != patchid {
+			savedPatchId = patchid
+			//Start to analyze
+			var mapFlows FlowsFormat
+			json.Unmarshal([]byte(hubbleFlows), &mapFlows)
 			
-			if len(suspectedFlows) == 0 {
+			//phase 1
+			//lengthBefore := float64(len(mapFlow))
+			mapFlows = filterOnlyRequestTraffic(mapFlows)
+		
+			//req.body is the input json
+			var T float64 = float64(len(mapFlows))
+		
+			//count number of each host
+			flowsStats := countHostsAppearance(mapFlows)
+			numberOfFlow := len(flowsStats)
+			fmt.Println(flowsStats)
+			
+			//for first scrape, we don't know meanT
+			if meanT==0 { meanT = T}
+			if (R == 0) {
+				R = meanT/float64(numberOfFlow)
+				fmt.Println("R: ", R)
+			}
+			//fmt.Println("meanT:", meanT, " stdDev:", standardDeviation)    
+			//Phase 1 identify there are unexpected hight traffic
+			//save StandardDeviation for phase 1.1
+			tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
+			if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
+				tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
+			}
+			newMeanT := meanT + alpha * (T - meanT)
+			newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
+			threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
+		
+			//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
+			//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
+			haveSuspected:=true
+			//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
+			if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
+				//
 				meanT = newMeanT
 				standardDeviation = newStandardDeviation
-				R = meanT / float64(numberOfFlow)	
-			} else {
-				fmt.Println("Attack confirmed")
-				suspectedFlowsJson, _ := json.Marshal(suspectedFlows)
-				fmt.Println(string(suspectedFlowsJson))
-				client.Set("suspected", string(suspectedFlowsJson), -1)
+				R = meanT / float64(numberOfFlow)
+				//fmt.Println("ok")
+				haveSuspected = false
+			}
+	
+			//Phase 2 filter the highest possible attack flow
+			var suspectedFlows FlowsFormat
+			if (haveSuspected) {
+				fmt.Println("possible attack detected")
+				//A
+				numberOfAttackFlow := maxAttackHostsRatio * float64(numberOfFlow)
+				if numberOfAttackFlow < 1 { numberOfAttackFlow = 1 }
+				//Each traffic caused by attacker will create a similar dns flow
+				//So we must add this to make the argorithm works correctly
+				numberOfAttackFlow = numberOfAttackFlow * 2
+				//mR
+				minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
+				fmt.Println("minAttackTraffic:", minAttackTraffics)
+				suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+				
+				if len(suspectedFlows) == 0 {
+					meanT = newMeanT
+					standardDeviation = newStandardDeviation
+					R = meanT / float64(numberOfFlow)	
+				} else {
+					fmt.Println("Attack confirmed")
+					suspectedFlowsJson, _ := json.Marshal(suspectedFlows)
+					fmt.Println(string(suspectedFlowsJson))
+					client.RPush("suspected", string(suspectedFlowsJson))
+				}
 			}
 		}
 		
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 3)
 	}
 }
 
