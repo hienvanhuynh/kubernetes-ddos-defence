@@ -136,7 +136,6 @@ spec:
 			realLabel := label.(string)[4:]
 			if !strings.Contains(realLabel, "=") {
 				unidentifiedFlow=true
-				break
 			} else {
 				realLabel = strings.Replace(realLabel, "=", ": ", -1)
 			}
@@ -145,7 +144,6 @@ spec:
 			fmt.Println(realLabel)
 		} else {
 			unidentifiedFlow=true
-			break
 		}
 	}
 	command +=`
@@ -157,7 +155,6 @@ spec:
 			realLabel := label.(string)[4:]
 			if !strings.Contains(realLabel, "=") {
 				unidentifiedFlow=true
-				break
 			} else {
 				realLabel = strings.Replace(realLabel, "=", ": ", -1)
 			}
@@ -166,9 +163,8 @@ spec:
 			fmt.Println(realLabel)	  
 		} else {
 			unidentifiedFlow=true
-			break
 		}
-		if strings.Contains(label.(string), "reserved:") {
+		if strings.Contains(label.(string), "reserved:world") {
 			worldFlow = true
 			break
 		}
@@ -178,8 +174,8 @@ spec:
   - fromEntities:
     - "all"
 EOF`
-
 	if worldFlow == true {
+		unidentifiedFlow = false
 		command = `cat <<EOF | kubectl apply -f -
 apiVersion: 'cilium.io/v2'
 kind: CiliumClusterwideNetworkPolicy
@@ -192,17 +188,13 @@ spec:
 			if label.(string)[:4] == "k8s:" {
 				realLabel := label.(string)[4:]
 				if !strings.Contains(realLabel, "=") {
-					unidentifiedFlow=true
-					break
+					continue
 				} else {
 					realLabel = strings.Replace(realLabel, "=", ": ", -1)
 				}
 				command += `
       `+ realLabel
 				fmt.Println(realLabel)
-			} else {
-				unidentifiedFlow=true
-				break
 			}
 		}
 		command +=`
@@ -211,15 +203,15 @@ spec:
 		externalIP := flow["IP"].(map[string]interface{})["source"].(string)
 		command += `
     - ` + externalIP + `/32`
-	}
 	command +=`
   ingress:
   - fromEntities:
     - "all"
 EOF`
-
-	if unidentifiedFlow==true {
-		fmt.Println("unknown attack flow")
+	}
+	
+	if unidentifiedFlow == true {
+		fmt.Println("attack flow is unknown")
 		return
 	}
 	out, _ := execBashCommand(command);
