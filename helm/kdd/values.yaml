@@ -19,7 +19,7 @@ preConfiguration:
 redis:
   enabled: true
 
-ddosDetection:
+ddosDetector:
   enabled: true
   replicas: 1
 
