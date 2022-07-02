@@ -15,8 +15,7 @@ func main() {
 	MIN_PATCH_ID := 0
 	MAX_PATCH_ID := 100000000
 	patchid := MIN_PATCH_ID
-	//detectionUrl := "http://ddos-detection.kube-system.svc.cluster.local:5060/newpatch"
-	
+
 	// Create Redis Client
     /*var (
     	host     = getEnv("REDIS_HOST", "http://redis.kube-system.pod.cluster.local:6379")

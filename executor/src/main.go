@@ -2,24 +2,23 @@ package main
 
 import (
 	"fmt"
-	//"io/ioutil"
     "os/exec"
-	//"bytes"
 	"encoding/json"
 	"time"
-	//"net/http"
 	"strings"
 	"strconv"
 	"math/rand"
 	"github.com/go-redis/redis"
 )
+
 var MAX_CNP_TIME_TO_LIVE=300
 type FlowsFormat []FlowFormat
 type FlowFormat map[string]interface{}
-//type FlowFormat []map[string]interface{}
+
 //key: CNP name
 //value: time lived
 type WatchingCCNPs map[string]int
+
 func main() {
 	fmt.Println("Working")
 	rand.Seed(time.Now().UnixNano())

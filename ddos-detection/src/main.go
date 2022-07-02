@@ -2,18 +2,14 @@ package main
 
 import (
 	"fmt"
-	//"io/ioutil"
     "os/exec"
-	//"bytes"
 	"time"
 	"reflect"
-	//"net/http"
 	"strings"
 	"encoding/json"
 	"strconv"
 	"math/rand"
 	"math"
-	//"os"
 	"github.com/go-redis/redis"
 )
 
@@ -89,7 +85,6 @@ func main() {
 				R = meanT/float64(numberOfFlow)
 				fmt.Println("R: ", R)
 			}
-			//fmt.Println("meanT:", meanT, " stdDev:", standardDeviation)    
 			//Phase 1 identify there are unexpected hight traffic
 			//save StandardDeviation for phase 1.1
 			tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
@@ -154,20 +149,13 @@ func (flow1 FlowFormat) Equals(flow2 FlowFormat) bool {
 
 func getSuspectedFlows(flows FlowsFormat, flowsStats FlowsStats, minAttackTraffics int) (listSuspectedFlows FlowsFormat) {
 	listSuspectedFlows=FlowsFormat{}
-	//var buffer bytes.Buffer
+	
 	for flowIndex, freq := range flowsStats {
         if (freq >= minAttackTraffics) {
 			listSuspectedFlows = append(listSuspectedFlows, flows[flowIndex])
-			//buffer.WriteString(host+",")
-			//listSuspectedHosts=listSuspectedHosts + host + ","
-        }
+	    }
     }
-	//listSuspectedHosts = buffer.String()
-	//lenListSuspectedFlows := len(listSuspectedFlows)
-	//To delete the last comma
-	//if lenListSuspectedHosts > 0 {
-	//	listSuspectedHosts = listSuspectedHosts[:lenListSuspectedHosts-1]
-	//}
+	
 	return listSuspectedFlows
 }
 func countHostsAppearance(mapFlows FlowsFormat) (result FlowsStats) {

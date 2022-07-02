@@ -94,7 +94,6 @@ func homeGUI(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCcnpList() (policyListJson []map[string]interface{}) {
-	//command := "kubectl -n kube-system get cnp -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'"
 	command := "kubectl get ccnp -o jsonpath='{range .items[*]}{.metadata.annotations.kubectl\\.kubernetes\\.io/last-applied-configuration}{end}'"
 	policiesString, _ := execBashCommand(command)
 	policyListOpenJsonStr := "[" + strings.Replace(policiesString, "\n", ",", -1)
