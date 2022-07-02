@@ -1,0 +1,24 @@
+{{- if .Values.scraper.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper
+  namespace: kube-system
+  labels:
+    kdd-component: scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: scraper
+  template:
+    metadata:
+      labels:
+        kdd-component: scraper
+    spec:
+      serviceAccountName: kdd-admin
+      containers:
+      - name: scraper
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/scraper
+        imagePullPolicy: Always
+{{- end }}

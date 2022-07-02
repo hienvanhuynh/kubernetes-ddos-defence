@@ -1,0 +1,24 @@
+{{- if .Values.kddui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kddui
+  namespace: kube-system
+  labels:
+    kdd-component: kddui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: kddui
+  template:
+    metadata:
+      labels:
+        kdd-component: kddui
+    spec:
+      serviceAccountName: kdd-admin
+      containers:
+      - name: kddui
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/kddui
+        imagePullPolicy: Always
+{{- end }}

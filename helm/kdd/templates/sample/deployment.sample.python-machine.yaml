@@ -1,0 +1,22 @@
+{{- if .Values.sample.pythonMachine.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-attacker
+  labels:
+    machine: python-attacker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine: python-attacker
+  template:
+    metadata:
+      labels:
+        machine: python-attacker
+    spec:
+      containers:
+      - name: python-attacker
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/python-attacker
+        imagePullPolicy: Always
+{{- end }}

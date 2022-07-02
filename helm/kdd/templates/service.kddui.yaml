@@ -1,0 +1,16 @@
+{{- if .Values.kddui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kddui
+  namespace: kube-system
+spec:
+  selector:
+    kdd-component: kddui
+  type: {{ .Values.kddui.service.type }}
+  ports:
+  - port: 7080
+    {{- if eq .Values.kddui.service.type "NodePort" }}
+    nodePort: {{ .Values.kddui.service.nodePort }}
+    {{- end }}
+{{- end }}

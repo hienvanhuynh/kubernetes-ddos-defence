@@ -1,0 +1,23 @@
+{{- if .Values.ddosDetection.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ddos-detection
+  namespace: kube-system
+  labels:
+    module: detection
+spec:
+  replicas: {{ .Values.ddosDetection.replicas }}
+  selector:
+    matchLabels:
+      module: detection
+  template:
+    metadata:
+      labels:
+        module: detection
+    spec:
+      containers:
+      - name: ddos-detection
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/ddos-detection
+        imagePullPolicy: Always
+{{- end }}

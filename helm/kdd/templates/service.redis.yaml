@@ -1,0 +1,12 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: kube-system
+spec:
+  selector:
+    module: redis
+  ports:
+  - port: 6379
+{{- end }}

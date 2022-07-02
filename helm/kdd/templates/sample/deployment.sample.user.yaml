@@ -1,0 +1,22 @@
+{{- if .Values.sample.user.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: normal-user
+  labels:
+    machine: user
+spec:
+  replicas: {{ .Values.sample.user.replicas }}
+  selector:
+    matchLabels:
+      machine: user
+  template:
+    metadata:
+      labels:
+        machine: user
+    spec:
+      containers:
+      - name: normal-user
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/normal-user
+        imagePullPolicy: Always
+{{- end }}

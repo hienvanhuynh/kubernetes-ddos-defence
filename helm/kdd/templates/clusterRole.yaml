@@ -1,8 +1,8 @@
+{{- if .Values.preConfiguration.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kdd-admin
-  namespace: kube-system
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -10,6 +10,10 @@ rules:
 - apiGroups: [""]
   resources: ["pods/exec"]
   verbs: ["create"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "watch", "list"]
 - apiGroups: ["cilium.io"]
   resources: ["ciliumclusterwidenetworkpolicies"]
   verbs: ["get", "watch", "list", "create"]
+{{- end }}

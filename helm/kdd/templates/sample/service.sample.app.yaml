@@ -1,0 +1,13 @@
+{{- if .Values.sample.app.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: myservice
+spec:
+  selector:
+    app: myapp
+  type: NodePort
+  ports:
+   - port: 5050
+     nodePort: 32000
+{{- end }}

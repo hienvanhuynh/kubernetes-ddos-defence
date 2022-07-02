@@ -1,0 +1,24 @@
+{{- if .Values.executor.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executor
+  namespace: kube-system
+  labels:
+    kdd-component: executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kdd-component: executor
+  template:
+    metadata:
+      labels:
+        kdd-component: executor
+    spec:
+      serviceAccountName: kdd-admin
+      containers:
+      - name: executor
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/executor
+        imagePullPolicy: Always
+{{- end }}
