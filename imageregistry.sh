@@ -6,9 +6,9 @@ docker-compose build
 docker push $REGISTRY/scraper
 popd
 
-pushd ddos-detection/deployment
+pushd ddos-detector/deployment
 docker-compose build
-docker push $REGISTRY/ddos-detection
+docker push $REGISTRY/ddos-detector
 popd
 
 pushd executor/deployment

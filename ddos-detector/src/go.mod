@@ -1,4 +1,4 @@
-module ddos-detection
+module ddos-detector
 
 go 1.17
 
