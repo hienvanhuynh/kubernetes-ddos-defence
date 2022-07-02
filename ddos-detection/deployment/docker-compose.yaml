@@ -1,11 +1,9 @@
 version: "3.3"
 services:
   ddos-detection:
-    image: 192.168.56.1:5000/ddos-detection
+    image: "${REGISTRY}/ddos-detection"
     container_name: ddos-detection
     build:
       context: ..
       dockerfile: deployment/Dockerfile
-    ports:
-    - 5060:5060
     network_mode: "host"

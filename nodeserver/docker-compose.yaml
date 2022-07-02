@@ -1,7 +1,7 @@
 version: "3.3"
 services:
-  ddos-detection:
-    image: 192.168.56.1:5000/nodeserver
+  nodeserver:
+    image: "${REGISTRY}/nodeserver"
     container_name: nodeserver
     build:
       context: .

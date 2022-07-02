@@ -1,34 +1,42 @@
-REGISTRY='192.168.56.1:5000'
-cd normaluser/deployment
-pwd
-docker-compose build
-docker push $REGISTRY/normal-user
-cd ../../nodeserver
-pwd
-docker-compose build
-docker push $REGISTRY/nodeserver
-cd ../attacker/deployment
-pwd
-docker-compose build
-docker push $REGISTRY/attacker
-cd ../../scraper/deployment
-pwd
+#Make sure a registry is specified
+test -n "$REGISTRY" || eval 'echo "Need to specify a REGISTRY enviroment variable where to push image to" ; exit'
+
+pushd scraper/deployment
 docker-compose build
 docker push $REGISTRY/scraper
-cd ../../ddos-detection/deployment
-pwd
+popd
+
+pushd ddos-detection/deployment
 docker-compose build
 docker push $REGISTRY/ddos-detection
-cd ../../executor/deployment
-pwd
+popd
+
+pushd executor/deployment
 docker-compose build
 docker push $REGISTRY/executor
-cd ../../kddui/deployment
-pwd
+popd
+
+pushd kddui/deployment
 docker-compose build
 docker push $REGISTRY/kddui
-cd ../../python-attacker/deployment
-pwd
+popd
+
+pushd nodeserver
+docker-compose build
+docker push $REGISTRY/nodeserver
+popd
+
+pushd normaluser/deployment
+docker-compose build
+docker push $REGISTRY/normal-user
+popd
+
+pushd python-attacker/deployment
 docker-compose build
 docker push $REGISTRY/python-attacker
-cd ../..
+popd
+
+pushd attacker/deployment
+docker-compose build
+docker push $REGISTRY/attacker
+popd
