@@ -21,6 +21,8 @@ docker-compose build
 docker push $REGISTRY/kddui
 popd
 
+[[ "$SAMPLE_IMAGE" == "yes" ]] || exit
+
 pushd sample-src/nodeserver
 docker-compose build
 docker push $REGISTRY/nodeserver
