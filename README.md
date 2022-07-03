@@ -106,7 +106,7 @@ As my experience, no need to configure cgroup driver
 Init control plane node
 > $ sudo kubeadm init --skip-phases=addon/kube-proxy --ignore-preflight-errors=all --apiserver-advertise-address=\<CONTROL-PLANE-NODE-IP\>
 
-> $ mkdir -p $HOME/.kube
+> $ mkdir -p \$HOME/.kube
 
 > $ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 
