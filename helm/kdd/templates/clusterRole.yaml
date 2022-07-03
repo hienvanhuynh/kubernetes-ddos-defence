@@ -15,5 +15,5 @@ rules:
   verbs: ["get", "watch", "list"]
 - apiGroups: ["cilium.io"]
   resources: ["ciliumclusterwidenetworkpolicies"]
-  verbs: ["get", "watch", "list", "create"]
+  verbs: ["get", "watch", "list", "create", "delete"]
 {{- end }}

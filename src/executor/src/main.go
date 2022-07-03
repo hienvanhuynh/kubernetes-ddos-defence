@@ -12,7 +12,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-var MAX_CNP_TIME_TO_LIVE=300
+var MAX_CNP_TIME_TO_LIVE=60
 type FlowsFormat []FlowFormat
 type FlowFormat map[string]interface{}
 
@@ -45,9 +45,9 @@ func main() {
 		}
 
 		fmt.Println("Working")
-	
+
 		var listOfWatchingCcnp = WatchingCCNPs{}
-			
+
 		for {
 			time.Sleep(time.Second * 3)
 			if len(listOfWatchingCcnp) > 0 {
@@ -57,7 +57,7 @@ func main() {
 						delete(listOfWatchingCcnp, ccnpName)
 						deleteCcnp(ccnpName)
 					} else {
-						listOfWatchingCcnp[ccnpName] = seconds + 2
+						listOfWatchingCcnp[ccnpName] = seconds + 3
 					}
 				}
 			}
@@ -121,6 +121,7 @@ func isSeparatorInIPList(sep rune) (result bool) {
 }
 func deleteCcnp(ccnpName string) {
 	command:="kubectl delete ccnp "+ccnpName
+	fmt.Println("delete command:"+command)
 	execBashCommand(command)
 }
 
