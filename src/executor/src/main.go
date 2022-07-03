@@ -194,7 +194,6 @@ spec:
 			}
 			policySpec += `
         `+realLabel
-			fmt.Println(realLabel)	  
 		}
 		if strings.Contains(label.(string), "reserved:world") {
 			worldFlow = true
