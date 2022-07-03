@@ -8,6 +8,7 @@ import (
 	"strings"
 	"strconv"
 	"math/rand"
+	"io"
 	"github.com/go-redis/redis"
 )
 
@@ -20,7 +21,6 @@ type FlowFormat map[string]interface{}
 type WatchingCCNPs map[string]int
 
 func main() {
-	fmt.Println("Working")
 	rand.Seed(time.Now().UnixNano())
 
 	var (
@@ -43,10 +43,13 @@ func main() {
 			time.Sleep(time.Second * 5)
 			continue
 		}
+
+		fmt.Println("Working")
 	
 		var listOfWatchingCcnp = WatchingCCNPs{}
-		
+			
 		for {
+			time.Sleep(time.Second * 3)
 			if len(listOfWatchingCcnp) > 0 {
 				//Check if old cnp exists, delete it
 				for ccnpName, seconds := range listOfWatchingCcnp {
@@ -67,7 +70,9 @@ func main() {
 			
 			suspectedFlowsString, err := client.LPop("suspected").Result()
 			if err != nil {
-				break
+				if err == io.EOF {
+					break
+				}
 			} else if suspectedFlowsString == "" {
 				haveSuspected = false
 			}
@@ -84,11 +89,9 @@ func main() {
 			if haveSuspected == true {
 				for _, flow := range suspectedFlows {
 					fmt.Println("Blocking flow:", flow)
-					applyCcnp(flow)
+					applyCcnp(flow, listOfWatchingCcnp)
 				}
 			}
-			
-			time.Sleep(time.Second * 3)
 		}
 	}
 }
@@ -120,17 +123,39 @@ func deleteCcnp(ccnpName string) {
 	command:="kubectl delete ccnp "+ccnpName
 	execBashCommand(command)
 }
-func applyCcnp(flow FlowFormat) {
+
+func getPolicy(policyName string) (policy string){
+	command := "kubectl get ccnp " + policyName + " -o yaml"
+	out, err := execBashCommand(command)
+	if err != nil {
+		fmt.Println("Failed to get policy content")
+	}
+	return out
+}
+
+func testIfThisPolicyAlreadyExists(thisSpec string, listOfWatchingCcnp WatchingCCNPs) (exists bool) {
+	for policyName,_ := range listOfWatchingCcnp {
+		watchingPolicy := getPolicy(policyName)
+		
+		if strings.Contains(watchingPolicy, thisSpec) {
+			return true
+		}
+	}
+	return false
+}
+
+func applyCcnp(flow FlowFormat, listOfWatchingCcnp WatchingCCNPs) {
 	unidentifiedFlow := false
 	worldFlow := false
 	numberOfCcnp := getNumberOfCcnpInString()
 	randValue := strconv.Itoa(100+rand.Intn(900))
 
-	command := `cat <<EOF | kubectl apply -f -
+	commandHeader := `cat <<EOF | kubectl apply -f -
 apiVersion: 'cilium.io/v2'
 kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: "blacklist-rule`+numberOfCcnp+randValue+`"
+  name: "blacklist-rule`+numberOfCcnp+randValue+`"`
+    policySpec :=`
 spec:
   endpointSelector:
     matchLabels:`
@@ -147,10 +172,14 @@ spec:
 		} else {
 			realLabel = strings.Replace(label.(string), "=", ": ", -1)
 		}
-		command += `
+		policySpec += `
       `+realLabel
 	}
-	command +=`
+	policySpec +=`
+  ingress:
+  - fromEntities:
+    - all`
+	policySpec +=`
   ingressDeny:
   - fromEndpoints:
     - matchLabels:`
@@ -162,7 +191,7 @@ spec:
 			} else {
 				realLabel = strings.Replace(realLabel, "=", ": ", -1)
 			}
-			command += `
+			policySpec += `
         `+realLabel
 			fmt.Println(realLabel)	  
 		}
@@ -171,18 +200,10 @@ spec:
 			break
 		}
 	}
-	command +=`
-  ingress:
-  - fromEntities:
-    - "all"
-EOF`
+	
 	if worldFlow == true {
 		unidentifiedFlow = false
-		command = `cat <<EOF | kubectl apply -f -
-apiVersion: 'cilium.io/v2'
-kind: CiliumClusterwideNetworkPolicy
-metadata:
-  name: "blacklist-rule`+numberOfCcnp+randValue+`"
+		policySpec = `
 spec:
   endpointSelector:
     matchLabels:`
@@ -194,28 +215,37 @@ spec:
 				} else {
 					realLabel = strings.Replace(realLabel, "=", ": ", -1)
 				}
-				command += `
+				policySpec += `
       `+ realLabel
 				fmt.Println(realLabel)
 			}
 		}
-		command +=`
+		policySpec +=`
+  ingress:
+  - fromEntities:
+    - all`
+		policySpec +=`
   ingressDeny:
   - fromCIDR:`
 		externalIP := flow["IP"].(map[string]interface{})["source"].(string)
-		command += `
+		policySpec += `
     - ` + externalIP + `/32`
-	command +=`
-  ingress:
-  - fromEntities:
-    - "all"
-EOF`
 	}
 	
 	if unidentifiedFlow == true {
 		fmt.Println("attack flow is unknown")
 		return
 	}
+
+	exists := testIfThisPolicyAlreadyExists(policySpec, listOfWatchingCcnp)
+	if exists == true {
+		fmt.Println("Policy is already existed")
+		return;
+	}
+	
+	command := commandHeader + policySpec + `
+EOF`
+
 	out, _ := execBashCommand(command);
 	fmt.Println(out)
 }
