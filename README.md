@@ -110,7 +110,7 @@ Init control plane node
 
 > $ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 
-> \$ sudo chown \$( id -u)\:\$( id -g) \$HOME/.kube/config
+> $ sudo chown \$(id -u)\:\$(id -g) \$HOME/.kube/config
 
 
 Then join in the worker nodes, running the following on each node as root:
