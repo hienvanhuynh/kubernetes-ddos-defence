@@ -27,65 +27,69 @@ func main() {
     	redisUrl     = "redis.kube-system.svc.cluster.local:6379"
     	password = ""
     )
-	
-    client := redis.NewClient(&redis.Options{
-    	Addr:     redisUrl,
-    	Password: password,
-    	DB:       0,
-    })
 
-    _, err := client.Ping().Result()
-    if err != nil {
-    	fmt.Println(err)
-    }
-
-	var listOfWatchingCcnp = WatchingCCNPs{}
-	numberOfLoop:=0;
 	for {
-		numberOfLoop++;
-		if numberOfLoop/30>(numberOfLoop-1)/30 {
-			fmt.Println("checked", numberOfLoop, "times")
+		client := redis.NewClient(&redis.Options{
+			Addr:     redisUrl,
+			Password: password,
+			DB:       0,
+		})
+	
+		_, err := client.Ping().Result()
+		if err != nil {
+			fmt.Println("ERROR: Could not found redis service, will not be able to work")
+			fmt.Println(err)
+			//Wait for sometime before retry, if don't do this then the log will be spammed
+			time.Sleep(time.Second * 5)
+			continue
 		}
-		if len(listOfWatchingCcnp) > 0 {
-			//Check if old cnp exists, delete it
-			for ccnpName, seconds := range listOfWatchingCcnp {
-				if seconds > MAX_CNP_TIME_TO_LIVE {
-					delete(listOfWatchingCcnp, ccnpName)
-					deleteCcnp(ccnpName)
-				} else {
-					listOfWatchingCcnp[ccnpName] = seconds + 2
+	
+		var listOfWatchingCcnp = WatchingCCNPs{}
+		
+		for {
+			if len(listOfWatchingCcnp) > 0 {
+				//Check if old cnp exists, delete it
+				for ccnpName, seconds := range listOfWatchingCcnp {
+					if seconds > MAX_CNP_TIME_TO_LIVE {
+						delete(listOfWatchingCcnp, ccnpName)
+						deleteCcnp(ccnpName)
+					} else {
+						listOfWatchingCcnp[ccnpName] = seconds + 2
+					}
 				}
 			}
-		}
-		
-		//detect new cnp
-		updateNewCcnpToWatchingList(&listOfWatchingCcnp)
-
-		//get suspected and apply cnp
-		haveSuspected := true
-		
-		suspectedFlowsString, err := client.LPop("suspected").Result()
-		if err != nil || suspectedFlowsString == "" {
-			haveSuspected = false
-		}
-
-		var suspectedFlows FlowsFormat
-		json.Unmarshal([]byte(suspectedFlowsString), &suspectedFlows)
-		
-		//suspectedString, err := client.Get("suspected").Result()
-		//fmt.Println(suspectedString)
-		if len(suspectedFlows) <= 0 {
-			haveSuspected = false
-		}
-
-		if haveSuspected == true {
-			for _, flow := range suspectedFlows {
-				fmt.Println("Blocking flow:", flow)
-				applyCcnp(flow)
+			
+			//detect new cnp
+			updateNewCcnpToWatchingList(&listOfWatchingCcnp)
+	
+			//get suspected and apply cnp
+			haveSuspected := true
+			
+			suspectedFlowsString, err := client.LPop("suspected").Result()
+			if err != nil {
+				break
+			} else if suspectedFlowsString == "" {
+				haveSuspected = false
 			}
+	
+			var suspectedFlows FlowsFormat
+			json.Unmarshal([]byte(suspectedFlowsString), &suspectedFlows)
+			
+			//suspectedString, err := client.Get("suspected").Result()
+			//fmt.Println(suspectedString)
+			if len(suspectedFlows) <= 0 {
+				haveSuspected = false
+			}
+	
+			if haveSuspected == true {
+				for _, flow := range suspectedFlows {
+					fmt.Println("Blocking flow:", flow)
+					applyCcnp(flow)
+				}
+			}
+			
+			time.Sleep(time.Second * 3)
 		}
-		
-		time.Sleep(time.Second * 2)
 	}
 }
 
@@ -131,19 +135,20 @@ spec:
   endpointSelector:
     matchLabels:`
 	for _, label := range flow["destination"].(map[string]interface{})["labels"].([]interface{}) {
+		realLabel := label.(string)[4:]
+
 		if label.(string)[:4] == "k8s:" {
-			realLabel := label.(string)[4:]
 			if !strings.Contains(realLabel, "=") {
 				unidentifiedFlow=true
 			} else {
 				realLabel = strings.Replace(realLabel, "=", ": ", -1)
 			}
-			command += `
-      `+realLabel
-			fmt.Println(realLabel)
+
 		} else {
-			unidentifiedFlow=true
+			realLabel = strings.Replace(label.(string), "=", ": ", -1)
 		}
+		command += `
+      `+realLabel
 	}
 	command +=`
   ingressDeny:
@@ -160,8 +165,6 @@ spec:
 			command += `
         `+realLabel
 			fmt.Println(realLabel)	  
-		} else {
-			unidentifiedFlow=true
 		}
 		if strings.Contains(label.(string), "reserved:world") {
 			worldFlow = true
@@ -226,18 +229,16 @@ func getNumberOfCcnpInString() (numberOfCcnp string) {
 	return numberOfCcnp
 }
 
-func execBashCommand(command string) (result string, err int) {
+func execBashCommand(command string) (result string, err error) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()
 	if cmderr != nil {
-		fmt.Println(cmderr, ":", string(out))
+		//fmt.Println(cmderr, ":", string(out))
 		result = ""
-		err=1
 	} else {
 		result = string(out)
 		if len(result) > 0 && result[0]=='"' {
 			result = result[1:][:len(result)-2]
 		}
-		err=0
 	}
-	return result, err
+	return result, cmderr
 }

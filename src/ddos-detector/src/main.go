@@ -26,16 +26,6 @@ func main() {
     	password = ""
     )
 	
-    client := redis.NewClient(&redis.Options{
-    	Addr:     redisUrl,
-    	Password: password,
-    	DB:       0,
-    })
-
-    _, err := client.Ping().Result()
-    if err != nil {
-    	fmt.Println(err)
-    }
 	var meanT float64 = 0
 	var standardDeviation float64 = 0
 	var alpha float64 = 0.08
@@ -49,93 +39,122 @@ func main() {
 	var maxAttackHostsRatio float64 = 0.1
 	//Usual traffic of a client
 	var R float64 = 0
-	
-	savedPatchId := "-1"
-	numberOfLoop := 0;
-	for {
-		numberOfLoop++;
-		if numberOfLoop/30>(numberOfLoop-1)/30 {
-			fmt.Println("checked", numberOfLoop, "times")
-		}
-		
-		hubbleFlows, _ := client.Get("newpatch").Result()
-		patchid, _ := client.Get("patchid").Result()
-		var mapFlows FlowsFormat
-		json.Unmarshal([]byte(hubbleFlows), &mapFlows)
-		
-		//phase 1
-		//lengthBefore := float64(len(mapFlow))
-		mapFlows = filterMainTraffic(mapFlows)
-		mapFlows = filterMainTraffic(mapFlows)
-		//req.body is the input json
-		var T float64 = float64(len(mapFlows))
-		if savedPatchId != patchid && T > 0 {
-			savedPatchId = patchid
-			//Start to analyze
-			
-			//count number of each host
-			flowsStats := countHostsAppearance(mapFlows)
-			numberOfFlow := len(flowsStats)
-			
-			fmt.Println(flowsStats)
 
-			//for first scrape, we don't know meanT
-			if meanT==0 { meanT = T}
-			if (R == 0) {
-				R = meanT/float64(numberOfFlow)
-				fmt.Println("R: ", R)
+	for {
+		client := redis.NewClient(&redis.Options{
+			Addr:     redisUrl,
+			Password: password,
+			DB:       0,
+		})
+	
+		_, err := client.Ping().Result()
+		if err != nil {
+			fmt.Println("ERROR: Could not found redis service, will not be able to work")
+			fmt.Println(err)
+			//Wait for sometime before retry, if don't do this then the log will be spammed
+			time.Sleep(time.Second * 5)
+			continue
+		}
+	
+		savedPatchId := "-1"
+		numberOfLoop := 0;
+		patchid := "-1"
+		for {
+			numberOfLoop++;
+			if numberOfLoop/30>(numberOfLoop-1)/30 {
+				fmt.Println("checked", numberOfLoop, "times")
 			}
-			//Phase 1 identify there are unexpected hight traffic
-			//save StandardDeviation for phase 1.1
-			tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
-			if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
-				tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
-			}
-			newMeanT := meanT + alpha * (T - meanT)
-			newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
-			threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
-		
-			//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
-			//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
-			haveSuspected:=true
-			//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
-			if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
-				//
-				meanT = newMeanT
-				standardDeviation = newStandardDeviation
-				R = meanT / float64(numberOfFlow)
-				haveSuspected = false
+			
+			hubbleFlows, redisError := client.Get("newpatch").Result()
+			if redisError != nil {
+				break
 			}
 	
-			//Phase 2 filter the highest possible attack flow
-			var suspectedFlows FlowsFormat
-			if (haveSuspected) {
-				fmt.Println("possible attack detected")
-				//A
-				numberOfAttackFlow := maxAttackHostsRatio * float64(numberOfFlow)
-				if numberOfAttackFlow < 1 { numberOfAttackFlow = 1 }
-				//Each traffic caused by attacker will create a similar dns flow
-				//So we must add this to make the argorithm works correctly
-				numberOfAttackFlow = numberOfAttackFlow * 2
-				//mR
-				minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
-				fmt.Println("minAttackTraffic:", minAttackTraffics)
-				suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+			patchid, redisError = client.Get("patchid").Result()
+			if redisError != nil {
+				break
+			}
+	
+			var mapFlows FlowsFormat
+			json.Unmarshal([]byte(hubbleFlows), &mapFlows)
+			
+			//phase 1
+			//lengthBefore := float64(len(mapFlow))
+			//mapFlows = filterMainTraffic(mapFlows)
+			mapFlows = filterMainTraffic(mapFlows)
+			//req.body is the input json
+			var T float64 = float64(len(mapFlows))
+			if savedPatchId != patchid && T > 0 {
+				savedPatchId = patchid
+				//Start to analyze
 				
-				if len(suspectedFlows) == 0 {
+				//count number of each host
+				flowsStats := countHostsAppearance(mapFlows)
+				numberOfFlow := len(flowsStats)
+				
+				fmt.Println(flowsStats)
+	
+				//for first scrape, we don't know meanT
+				if meanT==0 { meanT = T}
+				if (R == 0) {
+					R = meanT/float64(numberOfFlow)
+					fmt.Println("R: ", R)
+				}
+				//Phase 1 identify there are unexpected hight traffic
+				//save StandardDeviation for phase 1.1
+				tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
+				if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
+					tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
+				}
+				newMeanT := meanT + alpha * (T - meanT)
+				newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
+				threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
+			
+				//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
+				//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
+				haveSuspected:=true
+				//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
+				if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
+					//
 					meanT = newMeanT
 					standardDeviation = newStandardDeviation
-					R = meanT / float64(numberOfFlow)	
-				} else {
-					fmt.Println("Attack confirmed")
-					suspectedFlowsJson, _ := json.Marshal(suspectedFlows)
-					fmt.Println(string(suspectedFlowsJson))
-					client.RPush("suspected", string(suspectedFlowsJson))
+					R = meanT / float64(numberOfFlow)
+					haveSuspected = false
+				}
+		
+				//Phase 2 filter the highest possible attack flow
+				var suspectedFlows FlowsFormat
+				if (haveSuspected) {
+					fmt.Println("possible attack detected")
+					//A
+					numberOfAttackFlow := maxAttackHostsRatio * float64(numberOfFlow)
+					if numberOfAttackFlow < 1 { numberOfAttackFlow = 1 }
+					//Each traffic caused by attacker will create a similar dns flow
+					//So we must add this to make the argorithm works correctly
+					numberOfAttackFlow = numberOfAttackFlow * 2
+					//mR
+					minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
+					fmt.Println("minAttackTraffic:", minAttackTraffics)
+					suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+					
+					if len(suspectedFlows) == 0 {
+						meanT = newMeanT
+						standardDeviation = newStandardDeviation
+						R = meanT / float64(numberOfFlow)	
+					} else {
+						fmt.Println("Attack confirmed")
+						suspectedFlowsJson, _ := json.Marshal(suspectedFlows)
+						fmt.Println(string(suspectedFlowsJson))
+						redisError = client.RPush("suspected", string(suspectedFlowsJson)).Err()
+						if redisError != nil {
+							break
+						}
+					}
 				}
 			}
+			
+			time.Sleep(time.Second * 3)
 		}
-		
-		time.Sleep(time.Second * 3)
 	}
 }
 
@@ -274,18 +293,16 @@ func execCommand(command string) (result string, err int) {
 	}
 	return result, err
 }
-func execBashCommand(command string) (result string, err int) {
+func execBashCommand(command string) (result string, err error) {
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()
 	if cmderr != nil {
 		fmt.Println(cmderr, ":", string(out))
 		result = ""
-		err=1
 	} else {
 		result = string(out)
 		if result[0]=='"' {
 			result = result[1:][:len(result)-2]
 		}
-		err=0
 	}
 	return result, err
 }
