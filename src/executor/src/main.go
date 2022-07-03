@@ -12,7 +12,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-var MAX_CNP_TIME_TO_LIVE=60
+var MAX_CNP_TIME_TO_LIVE=600
 type FlowsFormat []FlowFormat
 type FlowFormat map[string]interface{}
 
