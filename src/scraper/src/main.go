@@ -39,7 +39,9 @@ func main() {
 		}
 		
 		for {
+
 			hubbleFlow, getHubbleFlowErr := getHubbleFlow()
+
 			if getHubbleFlowErr != nil {
 				time.Sleep(time.Second * 5)
 				continue
@@ -58,6 +60,7 @@ func main() {
 	
 			shortJsonStringFlow, _ := json.Marshal(mapFlow)
 			redisError := client.Set("newpatch", shortJsonStringFlow, -1).Err()
+
 			if redisError != nil {
 				break
 			}
@@ -71,33 +74,39 @@ func main() {
 			if patchid > MAX_PATCH_ID {
 				patchid = MIN_PATCH_ID
 			}
+
 			time.Sleep(time.Second * 5)
 		}
 	}
 }
 
 func getHubbleFlow() (result string, returnerr error) {
+
 	//Get hubble relay server
 	command := "kubectl -n kube-system get svc hubble-relay -o jsonpath='{.spec.clusterIP}'"
 	hubbleRelayIP, getHubbleIPErr := execBashCommand(command)
+
 	if getHubbleIPErr != nil || hubbleRelayIP == "" {
 		fmt.Println("ERROR: No hubble relay detected, will not be able to work")
 		return "", getHubbleIPErr
 	}
+
 	//Get flow
 	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 5.5s --verdict FORWARDED -o json"
 	rawFlows, getFlowErr := execBashCommand(command)
+
 	if getFlowErr != nil {
 		return "", getFlowErr
 	}
 
-	splitedFlow := strings.Split(rawFlows, "\n")
-	
-	var formatedFlow = "[" + strings.Join(splitedFlow[1:][:len(splitedFlow)-2], ",\n")+"]"
-	return formatedFlow, nil
+	splitedFlows := strings.Split(rawFlows, "\n")
+	formatedFlows := "[" + strings.Join(splitedFlows[1:][:len(splitedFlows)-2], ",\n")+"]"
+
+	return formatedFlows, nil
 }
 
 func getPodName(namespace string, labels ...string) (result string) {
+
 	command := "kubectl get pod -n "+namespace+" -o jsonpath=\"{.items[0].metadata.name}\""
 	for _, label := range labels {
 		command = command + " -l " + label
@@ -108,12 +117,17 @@ func getPodName(namespace string, labels ...string) (result string) {
 }
 
 func execBashCommand(command string) (result string, err error) {
+
 	out, cmderr := exec.Command("bash", "-c", command).CombinedOutput()
+	
 	if cmderr != nil {
+
 		fmt.Println(cmderr, ":", string(out))
 		result = ""
+	
 	} else {
 		result = string(out)
+
 		if result[0]=='"' {
 			result = result[1:][:len(result)-2]
 		}
