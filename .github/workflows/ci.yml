@@ -16,21 +16,37 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.16.x ]
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
       # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: ls -lah
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Test scraper
         run: |
-          pwd
-          ls
+          pushd src/scraper/src
+          go test
+          popd
+
+      - name: Test detector
+        run: |
+          pushd src/ddos-detector/src
+          go test
+          popd
+      
+      - name: Test executor
+        run: |
+          pushd src/executor/src
+          go test
+          popd
