@@ -4,5 +4,5 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
 RUN install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 COPY src /home/app
 WORKDIR /home/app
-RUN go build -o main . 
-CMD ["./main"]
+RUN go build -o scraper . 
+CMD ["./scraper"]
