@@ -30,6 +30,49 @@ If you want to expose hubble-ui to NodePort
 > $ kubectl -n kube-system patch service hubble-ui -p '{"spec":{"type":"NodePort", "ports":[{"port":80, "nodePort":30100}]}}'
 ### Deploy
 > $ helm upgrade --install kdd ./helm/kdd --set imageRegistry="\<YOUR-REGISTRY-URL\>"
+### Install Prometheus
+> $ kubectl create namespace prometheus
+> $ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+> $ helm upgrade -i prometheus prometheus-community/prometheus \\ \
+    --namespace prometheus \\ \
+    --set alertmanager.enabled=false \\ \
+    --set server.persistentVolume.storageClass="local-storage" \\ \
+    --set kubeStateMetrics.enabled=false \\ \
+    --set nodeExporter.enabled=false \\ \
+    --set pushgateway.enabled=false \\ \
+    --set server.persistentVolume.size=1.5Gi
+
+> $ kubectl --namespace=prometheus port-forward deploy/prometheus-server 9090
+
+> $ mkdir /home/\<CLUSTER_NODE_NAME\>/log
+
+> $ cat <<EOF | kubectl apply -f - \
+apiVersion: v1 \
+kind: PersistentVolume \
+metadata: \
+  name: prometheus-server \
+spec: \
+  capacity: \
+    storage: 1.5Gi \
+  accessModes: \
+    - ReadWriteOnce \
+  persistentVolumeReclaimPolicy: Retain \
+  storageClassName: local-storage \
+  claimRef: \
+    name: prometheus-server \
+    namespace: prometheus \
+  local: \
+    path: /home/\<CLUSTER_NODE_NAME\>/log/ \
+  nodeAffinity: \
+    required: \
+      nodeSelectorTerms: \
+       - matchExpressions: \
+          - key: kubernetes.io/hostname \
+            operator: In \
+            values: \
+             - \<CLUSTER_NODE_NAME\> \
+EOF
 
 ## Supplementary
 ### Setup a docker insecure registry
