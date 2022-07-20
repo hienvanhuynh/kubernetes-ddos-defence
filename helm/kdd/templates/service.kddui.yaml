@@ -2,11 +2,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: kddui
+  name: kdd-ui
   namespace: kube-system
 spec:
   selector:
-    kdd-component: kddui
+    kdd-component: kdd-ui
   type: {{ .Values.kddui.service.type }}
   ports:
   - port: 7080

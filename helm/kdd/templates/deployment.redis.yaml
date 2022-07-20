@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis
+  name: kdd-redis
   namespace: kube-system
   labels:
-    module: redis
+    module: kdd-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      module: redis
+      module: kdd-redis
   template:
     metadata:
       labels:
-        module: redis
+        module: kdd-redis
     spec:
       containers:
-      - name: redis
+      - name: kdd-redis
         image: redis:5.0.4
         command:
           - redis-server
@@ -40,7 +40,7 @@ spec:
           emptyDir: {}
         - name: config
           configMap:
-            name: redis-config-1
+            name: kdd-redis-config
             items:
             - key: redis-config
               path: redis.conf

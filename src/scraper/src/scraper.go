@@ -18,7 +18,7 @@ func main() {
 
 	// Create Redis Client
     var (
-    	redisUrl     = "redis.kube-system.svc.cluster.local:6379"
+    	redisUrl     = "kdd-redis.kube-system.svc.cluster.local:6379"
     	password = ""
     )
 	

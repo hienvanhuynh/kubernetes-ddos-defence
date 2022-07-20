@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ddos-detector
+  name: kdd-ddos-detector
   namespace: kube-system
   labels:
-    module: detector
+    module: kdd-ddos-detector
 spec:
   replicas: {{ .Values.ddosDetector.replicas }}
   selector:
     matchLabels:
-      module: detector
+      module: kdd-ddos-detector
   template:
     metadata:
       labels:
-        module: detector
+        module: kdd-ddos-detector
     spec:
       containers:
-      - name: ddos-detector
-        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/ddos-detector
+      - name: kdd-ddos-detector
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/kdd-ddos-detector
         imagePullPolicy: Always
 {{- end }}

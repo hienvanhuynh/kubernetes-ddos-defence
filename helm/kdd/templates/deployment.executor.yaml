@@ -2,23 +2,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: executor
+  name: kdd-executor
   namespace: kube-system
   labels:
-    kdd-component: executor
+    kdd-component: kdd-executor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      kdd-component: executor
+      kdd-component: kdd-executor
   template:
     metadata:
       labels:
-        kdd-component: executor
+        kdd-component: kdd-executor
     spec:
       serviceAccountName: kdd-admin
       containers:
-      - name: executor
-        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/executor
+      - name: kdd-executor
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/kdd-executor
         imagePullPolicy: Always
 {{- end }}

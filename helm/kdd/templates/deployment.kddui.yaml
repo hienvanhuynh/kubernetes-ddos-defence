@@ -2,23 +2,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kddui
+  name: kdd-ui
   namespace: kube-system
   labels:
-    kdd-component: kddui
+    kdd-component: kdd-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      kdd-component: kddui
+      kdd-component: kdd-ui
   template:
     metadata:
       labels:
-        kdd-component: kddui
+        kdd-component: kdd-ui
     spec:
       serviceAccountName: kdd-admin
       containers:
-      - name: kddui
-        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/kddui
+      - name: kdd-ui
+        image: {{ required "Need to specify the image registry" .Values.imageRegistry }}/kdd-ui
         imagePullPolicy: Always
 {{- end }}

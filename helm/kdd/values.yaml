@@ -18,6 +18,7 @@ preConfiguration:
 
 redis:
   enabled: true
+    
 
 ddosDetector:
   enabled: true
