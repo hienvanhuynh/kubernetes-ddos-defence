@@ -1,8 +1,8 @@
 version: "3.3"
 services:
   executor:
-    image: "${REGISTRY}/executor"
-    container_name: executor
+    image: "${REGISTRY}/kdd-executor"
+    container_name: kdd-executor
     build:
       context: ..
       dockerfile: deployment/Dockerfile

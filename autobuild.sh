@@ -3,22 +3,22 @@ test -n "$REGISTRY" || eval 'echo "Need to specify a REGISTRY enviroment variabl
 
 pushd src/scraper/deployment
 docker-compose build
-docker push $REGISTRY/scraper
+docker push $REGISTRY/kdd-scraper
 popd
 
 pushd src/ddos-detector/deployment
 docker-compose build
-docker push $REGISTRY/ddos-detector
+docker push $REGISTRY/kdd-ddos-detector
 popd
 
 pushd src/executor/deployment
 docker-compose build
-docker push $REGISTRY/executor
+docker push $REGISTRY/kdd-executor
 popd
 
 pushd src/kddui/deployment
 docker-compose build
-docker push $REGISTRY/kddui
+docker push $REGISTRY/kdd-ui
 popd
 
 [[ "$SAMPLE_IMAGE" == "yes" ]] || exit

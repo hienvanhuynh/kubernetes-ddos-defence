@@ -1,8 +1,8 @@
 version: "3.3"
 services:
   ddos-detector:
-    image: "${REGISTRY}/ddos-detector"
-    container_name: ddos-detector
+    image: "${REGISTRY}/kdd-ddos-detector"
+    container_name: kdd-ddos-detector
     build:
       context: ..
       dockerfile: deployment/Dockerfile

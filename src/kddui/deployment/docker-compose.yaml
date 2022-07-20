@@ -1,8 +1,8 @@
 version: "3.3"
 services:
   kddui:
-    image: "${REGISTRY}/kddui"
-    container_name: kddui
+    image: "${REGISTRY}/kdd-ui"
+    container_name: kdd-ui
     build:
       context: ..
       dockerfile: deployment/Dockerfile
