@@ -17,6 +17,12 @@ type FlowsFormat []FlowFormat
 type FlowFormat map[string]interface{}
 //index is which flow this is pointing to, value is the counted appearance number
 type FlowsStats map[int]int
+type Candidate struct {
+	flow FlowFormat
+	numberOfTimes int
+}
+type Candidates []Candidate
+
 
 func main() {
 	fmt.Println("Working")
@@ -40,6 +46,8 @@ func main() {
 	//Usual traffic of a client
 	var R float64 = 0
 
+	var candidates Candidates
+
 	for {
 		client := redis.NewClient(&redis.Options{
 			Addr:     redisUrl,
@@ -52,10 +60,10 @@ func main() {
 			fmt.Println("ERROR: Could not found redis service, will not be able to work")
 			fmt.Println(err)
 			//Wait for sometime before retry, if don't do this then the log will be spammed
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 3)
 			continue
 		}
-	
+
 		savedPatchId := "-1"
 		numberOfLoop := 0;
 		patchid := "-1"
@@ -64,17 +72,21 @@ func main() {
 			if numberOfLoop/30>(numberOfLoop-1)/30 {
 				fmt.Println("checked", numberOfLoop, "times")
 			}
-			
+
 			hubbleFlows, redisError := client.Get("newpatch").Result()
 			if redisError != nil {
+				fmt.Println("Error when get newpatch: ", redisError)
 				break
 			}
 	
 			patchid, redisError = client.Get("patchid").Result()
+			fmt.Println("patch: ", patchid)
+			
 			if redisError != nil {
+				fmt.Println("Error when get patchid: ", redisError)
 				break
 			}
-	
+
 			var mapFlows FlowsFormat
 			json.Unmarshal([]byte(hubbleFlows), &mapFlows)
 			
@@ -84,7 +96,9 @@ func main() {
 			mapFlows = filterMainTraffic(mapFlows)
 			//req.body is the input json
 			var T float64 = float64(len(mapFlows))
-			if savedPatchId != patchid && T > 0 {
+			if savedPatchId == patchid || T == 0 {
+				fmt.Println("No new patch")
+			} else {
 				savedPatchId = patchid
 				//Start to analyze
 				
@@ -135,9 +149,9 @@ func main() {
 					//mR
 					minAttackTraffics := int((T - (float64(numberOfFlow) - numberOfAttackFlow) * R) / numberOfAttackFlow)
 					fmt.Println("minAttackTraffic:", minAttackTraffics)
-					suspectedFlows = getSuspectedFlows(mapFlows, flowsStats, minAttackTraffics)
+					suspectedFlows, candidates = getSuspectedFlows(&mapFlows, &flowsStats, minAttackTraffics, &candidates)
 					
-					if len(suspectedFlows) == 0 {
+					if len(suspectedFlows) == 0 && len(candidates) == 0 {
 						meanT = newMeanT
 						standardDeviation = newStandardDeviation
 						R = meanT / float64(numberOfFlow)	
@@ -166,17 +180,49 @@ func (flow1 FlowFormat) Equals(flow2 FlowFormat) bool {
 	return false
 }
 
-func getSuspectedFlows(flows FlowsFormat, flowsStats FlowsStats, minAttackTraffics int) (listSuspectedFlows FlowsFormat) {
+func getSuspectedFlows(flows *FlowsFormat, flowsStats *FlowsStats, minAttackTraffics int, oldCandidates *Candidates) (listSuspectedFlows FlowsFormat, newCandidates Candidates) {
 	listSuspectedFlows=FlowsFormat{}
-	
-	for flowIndex, freq := range flowsStats {
-        if (freq >= minAttackTraffics) {
-			listSuspectedFlows = append(listSuspectedFlows, flows[flowIndex])
-	    }
+    
+	lenOldCandidates := len(*oldCandidates)
+
+	for flowIndex, freq := range *flowsStats {
+        
+		if (freq >= minAttackTraffics) {
+			
+			newCandidateFlow := (*flows)[flowIndex]
+
+			numAppear := 1
+
+			for index := 0; index < lenOldCandidates; index++ {
+				
+				if newCandidateFlow.Equals((*oldCandidates)[index].flow) {
+					
+					numAppear = numAppear + (*oldCandidates)[index].numberOfTimes
+					
+					lenOldCandidates--
+					(*oldCandidates)[index] = (*oldCandidates)[lenOldCandidates]
+					
+					break
+				}
+			}
+
+			//If this flow is the candidate 3 times then decide this is a suspected flow
+			if numAppear >= 3 {
+
+				listSuspectedFlows = append(listSuspectedFlows, newCandidateFlow)
+		
+			} else {
+
+				//If flow is the candidate less than 3 times then add it to new candidates list
+				newCandidate := Candidate{newCandidateFlow, numAppear}
+				newCandidates = append(newCandidates, newCandidate)
+			}
+		}
     }
 	
-	return listSuspectedFlows
+	return listSuspectedFlows, newCandidates
 }
+
 func countHostsAppearance(mapFlows FlowsFormat) (result FlowsStats) {
 	result=FlowsStats{}
 	for oneFlowIndex, oneFlow := range mapFlows {
