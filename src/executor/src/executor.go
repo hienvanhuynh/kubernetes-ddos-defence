@@ -229,7 +229,7 @@ spec:
   - fromCIDR:`
 		externalIP := flow["IP"].(map[string]interface{})["source"].(string)
 		policySpec += `
-    - ` + externalIP + `/32`
+    - ` + externalIP
 	}
 	
 	if unidentifiedFlow == true {
