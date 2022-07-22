@@ -2,7 +2,7 @@
 test -n "$PROMETHEUS_URL" || eval 'echo "Need to specify a PROMETHEUS_URL enviroment variable where to collect metrics" ; exit'
 
 #Need to clone GoldenEye into parent folder of kdd
-pushd ../../GoldenEye
+#pushd ../../GoldenEye
 
 current_unix_timestamp=$(date '+%s')
 echo "Current timestamp: $current_unix_timestamp"
@@ -45,4 +45,5 @@ echo "sum $sum periods $periods"
 average=$((sum*8/periods/1024))
 echo "$total_in_periods"
 echo "The average: $average Kbps, in $times s from $start_time to $end_time"
-popd
+
+#popd
