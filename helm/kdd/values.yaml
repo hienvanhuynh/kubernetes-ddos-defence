@@ -30,8 +30,9 @@ executor:
 scraper:
   enabled: true
 
+# Deprecated, replace by new GUI component
 kddui:
-  enabled: true
+  enabled: false
   service:
     type: NodePort
     nodePort: 32080

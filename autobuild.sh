@@ -16,10 +16,11 @@ docker-compose build
 docker push $REGISTRY/kdd-executor
 popd
 
-pushd src/kddui/deployment
-docker-compose build
-docker push $REGISTRY/kdd-ui
-popd
+# Deprecated
+#pushd src/kddui/deployment
+#docker-compose build
+#docker push $REGISTRY/kdd-ui
+#popd
 
 [[ "$SAMPLE_IMAGE" == "yes" ]] || exit
 

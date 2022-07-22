@@ -5,7 +5,7 @@ import (
     "os/exec"
 	"time"
 	"strings"
-	"encoding/json"
+	//"encoding/json"
 	"github.com/go-redis/redis"
 )
 
@@ -40,15 +40,16 @@ func main() {
 		
 		for {
 
-			hubbleFlow, getHubbleFlowErr := getHubbleFlow()
-
+			hubbleFlows, getHubbleFlowErr := getHubbleFlow()
+			
 			if getHubbleFlowErr != nil {
+				fmt.Println("Error get hubble flow: ", getHubbleFlowErr)
 				time.Sleep(time.Second * 5)
 				continue
 			}
 
-			var mapFlow FlowFormat
-			json.Unmarshal([]byte(hubbleFlow), &mapFlow)
+			//var mapFlow FlowFormat
+			//json.Unmarshal([]byte(hubbleFlows), &mapFlow)
 			
 			//for _, oneFlow := range mapFlow {
 			//	delete(oneFlow, "node_name")
@@ -58,15 +59,18 @@ func main() {
 			//	delete(oneFlow, "trace_observation_point")
 			//}
 	
-			shortJsonStringFlow, _ := json.Marshal(mapFlow)
-			redisError := client.Set("newpatch", shortJsonStringFlow, -1).Err()
+			//shortJsonStringFlow, _ := json.Marshal(mapFlow)
+			redisError := client.Set("newpatch", hubbleFlows, -1).Err()
 
 			if redisError != nil {
+				fmt.Println("Error set newpatch to redis:", redisError)
 				break
 			}
 	
 			redisError = client.Set("patchid", patchid, -1).Err()
+
 			if redisError != nil {
+				fmt.Println("Error set patchid to redis: ", redisError)
 				break
 			}
 	
@@ -74,7 +78,7 @@ func main() {
 			if patchid > MAX_PATCH_ID {
 				patchid = MIN_PATCH_ID
 			}
-
+			
 			time.Sleep(time.Second * 5)
 		}
 	}
@@ -92,9 +96,10 @@ func getHubbleFlow() (result string, returnerr error) {
 	}
 
 	//Get flow
-	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 5.5s --verdict FORWARDED -o json"
+	command = "kubectl exec " + getPodName("kube-system", "k8s-app=cilium") + " -n kube-system -- hubble --server " + hubbleRelayIP + ":80 observe --since 5.5s --until 0s --verdict FORWARDED -o json"
+	
 	rawFlows, getFlowErr := execBashCommand(command)
-
+	
 	if getFlowErr != nil {
 		return "", getFlowErr
 	}
