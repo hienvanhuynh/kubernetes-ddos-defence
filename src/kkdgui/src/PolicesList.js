@@ -13,13 +13,23 @@ import { Box, Container } from '@mui/system';
 import OverflowTip from './component/overflowTip';
 import { Client1_13 } from 'kubernetes-client';
 
-const client = new Client1_13({ version: '1.13' });
+//const client = new Client1_13({ version: '1.13' });
 
-const getAllPolicies = async () => {
-  const policies = await client.apis.networking.k8s.io.v1.networkpolicies.get();
-  return policies;
-}
+const k8s = require('@kubernetes/client-node');
 
+const kc = new k8s.KubeConfig();
+kc.loadFromDefault();
+
+const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
+// const k8sNetworkingApi = kc.makeApiClient(k8s.NetworkingV1Api);
+
+k8sApi.listNamespacedPod('kube-system').then((res) => {
+  console.log('pod', res.body);
+});
+
+// k8sNetworkingApi.listNetworkPolicyForAllNamespaces().then((res => {
+//   console.log('policies', res);
+// }))
 
 const policy1 = {
   "apiVersion": "v1",
@@ -66,6 +76,13 @@ const policy1 = {
       "resourceVersion": ""
   }
 };
+
+const getAllPolicies = async () => {
+  // const policies = await client.apis.networking.k8s.io.v1.networkpolicies.get();
+  const policies = [policy1];
+  return policies;
+}
+
 
 const convertJSONtoList = (json) =>
 {
@@ -119,13 +136,13 @@ const getDataFromPolicy = (policy) => {
 
 export default function PolicyListAccordion() {
 
-  const [policies, setPolices] = React.useState([]);
+  const [policies, setPolices] = React.useState([policy1]);
 
   React.useEffect(() => {
     const policiesFetched = getAllPolicies();
     console.log('policies', policiesFetched);
-    setPolices(policiesFetched);
-  });
+    //setPolices(policiesFetched);
+  }, []);
 
   //let policy = getDataFromPolicy(policy1);
 

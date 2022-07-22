@@ -1,35 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kkdgui-deployment
-  labels:
-    app: kkdgui
+  name: kkd-gui-deployment
 spec:
   selector:
     matchLabels:
-      app: kkdgui
+      app: kkd-gui
   template:
     metadata:
       labels:
-        app: kkdgui
+        app: kkd-gui
     spec:
       containers:
-      - image: kkdgui
-        name: kkdgui
-        ports:
-        - containerPort: 3000
-...
+      - image: nguyenduongag/kkd-gui
+        name: kkd-gui
+        imagePullPolicy: Always
+---
+
 apiVersion: v1
 kind: Service
 metadata:
-  name: kkdgui-nodeport
+  name: kkd-gui-nodeport
   labels:
-    service: kkdgui-service
+    service: kkd-gui-service
 spec:
   type: NodePort
   ports:
-    - port: 7567
-      nodePort: 30039
+    - port: 3000
       targetPort: 3000
   selector:
-    name: kkdgui
+    app: kkd-gui
