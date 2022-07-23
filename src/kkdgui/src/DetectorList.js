@@ -13,6 +13,7 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 export default function DetectorList() {
   const [checked, setChecked] = React.useState(['wifi']);
+  const [names, setNames] = React.useState([]);
 
   const handleToggle = (value) => () => {
     const currentIndex = checked.indexOf(value);
@@ -27,70 +28,44 @@ export default function DetectorList() {
     setChecked(newChecked);
   };
 
+  React.useEffect(async () => {
+
+    const res = await fetch('/apinode/getDetectors');
+    const names = await res.json();
+
+    const nameList = names.nameList;
+    setNames(nameList);
+  }, []);
+
   return (
+
     <List
       sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
     >
-      <ListItem>
-        <ListItemIcon>
-          <SettingsInputComponentIcon />
-        </ListItemIcon>
-        <ListItemText 
-          primary={<Typography variant="h6" style={{ color: 'green' }}>Detector 1</Typography>}
-          secondary="Added: 2 days ago"
-        />
+      {names.map(name => {
 
-        <Switch
-          edge="end"
-          onChange={handleToggle('wifi')}
-          checked={checked.indexOf('wifi') !== -1}
-          sx={{marginLeft: 3}}
-          inputProps={{
-            'aria-labelledby': 'switch-list-label-wifi',
-          }}
-        />
-      </ListItem>
-      
+        return (
+          <ListItem>
+            <ListItemIcon>
+              <SettingsInputComponentIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary={<Typography variant="h6" style={{ color: 'green' }}>{name}</Typography>}
+              secondary="Added: 2 days ago"
+            />
 
-      <ListItem>
-        <ListItemIcon>
-          <SettingsInputComponentIcon />
-        </ListItemIcon>
-        <ListItemText 
-          primary={<Typography variant="h6" style={{ color: 'green' }}>Detector 2</Typography>}
-          secondary="Added: 2 days ago"
-        />
-
-        <Switch
-          edge="end"
-          onChange={handleToggle('wifi2')}
-          checked={checked.indexOf('wifi2') !== -1}
-          sx={{marginLeft: 3}}
-          inputProps={{
-            'aria-labelledby': 'switch-list-label-wifi',
-          }}
-        />
-      </ListItem>
-
-      <ListItem>
-        <ListItemIcon>
-          <SettingsInputComponentIcon />
-        </ListItemIcon>
-        <ListItemText 
-          primary={<Typography variant="h6" style={{ color: 'grey' }}>Detector 3</Typography>}
-          secondary="Added: 2 days ago"
-        />
-
-        <Switch
-          edge="end"
-          onChange={handleToggle('wifi3')}
-          checked={checked.indexOf('wifi3') !== -1}
-          sx={{marginLeft: 3}}
-          inputProps={{
-            'aria-labelledby': 'switch-list-label-wifi',
-          }}
-        />
-      </ListItem>
+            <Switch
+              edge="end"
+              onChange={handleToggle('wifi')}
+              checked={checked.indexOf('wifi') !== -1}
+              sx={{marginLeft: 3}}
+              inputProps={{
+                'aria-labelledby': 'switch-list-label-wifi',
+              }}
+            />
+          </ListItem>
+        )
+      })}
     </List>
   );
 }

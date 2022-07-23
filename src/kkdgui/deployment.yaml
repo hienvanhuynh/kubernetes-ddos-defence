@@ -11,6 +11,7 @@ spec:
       labels:
         app: kkd-gui
     spec:
+      serviceAccountName: kdd-admin
       containers:
       - image: nguyenduongag/kkd-gui
         name: kkd-gui

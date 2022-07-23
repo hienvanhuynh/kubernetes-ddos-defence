@@ -86,7 +86,6 @@ export default function FullWidthTabs() {
           <Grid container spacing={2}>
             <Grid item xs={8}>
               <FlowGraph/>
-              <EnhancedTable/>
             </Grid>
             <Grid item xs={4}>
               <PolicyListAccordion></PolicyListAccordion>
