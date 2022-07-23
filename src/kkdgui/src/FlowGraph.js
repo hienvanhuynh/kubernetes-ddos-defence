@@ -250,22 +250,27 @@ export default function FlowGraph() {
           Forward/Drop packets count
         </Typography>
 
-        <BasicSelect
+        {/* <BasicSelect
           defaultValue={'prometheus'}
           labelName="Namespace"
           optionList={['prometheus', 'kube-system']}
-        />
+        /> */}
 
       </Box>
       
 
       <Container>
         <Line
-          height={200}
+          height={500}
           width={300}
           data={data}
           options={{
             maintainAspectRatio: false,
+            elements: {
+                point:{
+                    radius: 0
+                }
+            }
           }}
         />
       </Container>

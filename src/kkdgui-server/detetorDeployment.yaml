@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{DETECTOR_NAME}}
+  namespace: kube-system
+  labels:
+    module: kdd-ddos-detector
+spec:
+  selector:
+    matchLabels:
+      module: kdd-ddos-detector
+  template:
+    metadata:
+      labels:
+        module: kdd-ddos-detector
+    spec:
+      containers:
+      - name: {{DETECTOR_NAME}}
+        image: {{IMAGE_NAME}}
+        imagePullPolicy: Always

@@ -14,7 +14,9 @@ kc.loadFromDefault();
 
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 
-const command = "kubectl get ccnp -o json"
+const command = "kubectl get ccnp -o json";
+
+const getDetectorsCommand = "kubectl get deployment --selector=module=detector --output=jsonpath={.items..metadata.name}";
 
 const command2 = 'curl https://kubernetes.default.svc/apis/cilium.io/v2/ciliumclusterwidenetworkpolicies \
 --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
@@ -23,20 +25,42 @@ const command2 = 'curl https://kubernetes.default.svc/apis/cilium.io/v2/ciliumcl
 const k8sNetworkApi = kc.makeApiClient(k8s.NetworkingV1Api);
 
 
-// const fixJson = (string) => {
-//   let newString = string.replace('\n','').replace("\\",'');
-//   return JSON.parse(newString);
-// }
+const addDetectorCommand = 'cat detetorDeployment.yaml | sed "s/{{DETECTOR_NAME}}/$DETECTOR_NAME/g" | sed "s/{{IMAGE_NAME}}/$IMAGE_NAME/g" | kubectl apply -f -';
 
-// k8sNetworkApi.listNetworkPolicyForAllNamespaces().then((res) => {
-//     console.log(res.body);
-// });
+app.get('/apinode/addDetector', async (req, res) => {
 
-// k8sApi.listNamespacedPod('kube-system').then((res) => {
-//     console.log(res.body);
-// });
+  const name = req.query.name;
+  const imageName = req.query.imageName;
+  
+  console.log('imageName', imageName);
+  console.log('name', name);
 
-app.get('/getAllPolicies', async (req, res) => {
+  await exec(`export DETECTOR_NAME=name1`);
+  await exec(`export IMAGE_NAME=image2`);
+  
+  const { stdout, stderr } = await exec('echo $IMAGE_NAME');
+  console.log('echo', stdout);
+  
+  await exec(`cat detetorDeployment.yaml | sed "s/{{DETECTOR_NAME}}/${name}/g" | sed "s/{{IMAGE_NAME}}/${imageName}/g" | kubectl apply -f -`);
+  
+
+  res.status(200).send();
+});
+
+app.get('/apinode/deletePolicy', async (req, res) => {
+
+  const name = req.query.name;
+  console.log('name', name);
+
+  const { stdout, stderr } = await exec(`kubectl delete ccnp ${name}`);
+  console.log('echo', stdout);
+
+  res.status(200).send();
+});
+
+
+
+app.get('/apinode/getAllPolicies', async (req, res) => {
   const { stdout, stderr } = await exec(command);
   console.log('stfgegdout', stdout);
 
@@ -49,6 +73,20 @@ app.get('/getAllPolicies', async (req, res) => {
   console.log(fixOutput);
 
   res.json(fixOutput);
+})
+
+app.get('/apinode/getDetectors', async (req, res) => {
+  const { stdout, stderr } = await exec(getDetectorsCommand);
+  console.log('getDetectors', stdout);
+
+  // let object = {stdout};
+  // console.log('object', object);
+  // const fixOutput = fixJson(object.stdout);
+
+  
+  const list = stdout.split(" ");
+
+  res.json({nameList: list});
 })
 
 app.get('/', (req, res) => {

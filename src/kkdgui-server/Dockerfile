@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:16-buster
 # set working direction
 WORKDIR /kkdgui-server
 # add `/app/node_modules/.bin` to $PATH
@@ -6,7 +6,8 @@ ENV PATH /kkdgui-sever/node_modules/.bin:$PATH
 # install application dependencies
 COPY package.json ./
 COPY package-lock.json ./
-RUN apk --no-cache add curl
+
+RUN apt-get install curl
 RUN npm i
 
 # add app

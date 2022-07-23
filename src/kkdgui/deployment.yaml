@@ -16,6 +16,9 @@ spec:
       - image: nguyenduongag/kkd-gui
         name: kkd-gui
         imagePullPolicy: Always
+        env:
+        - name: NODE_IP
+          value: "192.168.1.100"
 ---
 
 apiVersion: v1
