@@ -2,9 +2,11 @@
   "name": "defence-gui",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://10.108.213.43:80",
   "dependencies": {
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
+    "@kubernetes/client-node": "^0.17.0",
     "@mui/icons-material": "^5.8.4",
     "@mui/material": "^5.8.5",
     "@testing-library/jest-dom": "^5.16.4",

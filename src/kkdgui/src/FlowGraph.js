@@ -109,6 +109,7 @@ import BasicSelect from './component/select';
 const getCurrentTotal = (data) => {
   let sum = 0;
 
+  //console.log('data calculate', data);
   data.data.result.forEach(source => {
     let n = parseInt(source.value[1]);
     sum += n;
@@ -130,44 +131,63 @@ const controlDataLength = (data, max) => {
   return data;
 }
 
-const updateData = (labels, dataset, n) => {
+const updateData = async (labels, dataset, n) => {
 
   let newLabels = labels;
 
   let second = new Date().getSeconds();
   let minute = new Date().getMinutes();
   let hours = new Date().getHours();
+  
+  let drop_data = await fetch("/api/v1/query?query=cilium_drop_count_total");
+  
+  let forward_data = await fetch("/api/v1/query?query=cilium_forward_count_total");
+  
+  console.log('drop raw', drop_data);
 
-  fetch("http://10.108.213.43:80/api/v1/query?query=cilium_drop_count_total")
-      .then(res => res.json())
-      .then(
-        (data) => {
-          const jsonData = data;
-          newLabels.push(`${hours}:${minute}:${second}`)
-          let newDataset = [];
-          dataset.forEach(data => {
-            let newData = data;
-            newData.push(getCurrentTotal(jsonData));
-            newDataset.push(newData)
-          });
-
-          return [controlDataLength(newLabels, 5), controlDataLength(newDataset, 5)]
-        },
-
-        (error) => {
-          newLabels.push(`${hours}:${minute}:${second}`);
-          let newDataset = [];
-          dataset.forEach(data => {
-            let newData = data;
-            newData.push(0);
-            newDataset.push(newData)
-          });
-          return [controlDataLength(newLabels, 5), controlDataLength(newDataset, 5)]
-        }
-      )
+  const dropJson = await drop_data.json();
+  const forwardJson = await forward_data.json();
+  
+  newLabels.push(`${hours}:${minute}:${second}`);
+  
+ 
+  let dropDataset = dataset[0];
+  dropDataset.push(getCurrentTotal(dropJson));
+   
+  let forwardDataset = dataset[1];
+  forwardDataset.push(getCurrentTotal(forwardJson));
+   
+  let newDataset = [dropDataset, forwardDataset]
 
 
-  return [controlDataLength(labels, 5), [controlDataLength(dataset, 5)]]
+  return [newLabels, newDataset]
+
+}
+
+const calculateDataGraph = (data) => {
+  console.log('data', data);
+  if (data.length < 2) {
+   return [];
+  }
+  let newData = [];
+  for (let i = 1; i < data.length; i++)
+  {
+    newData.push(data[i]-data[i-1]);
+  }
+  
+  return newData;
+}
+
+const calculateLabel = (labels) => {
+  const indexToRemove = 0;
+
+  const result = [...labels.slice(0, indexToRemove), ...labels.slice(indexToRemove + 1)];
+  
+  
+  console.log('labels', labels);
+  console.log('labels result', result);
+  
+  return result;	
 }
 
 
@@ -179,38 +199,38 @@ export default function FlowGraph() {
   const [dataset, setDataset] = useState([[], []]);
   let n = 1;
 
-  // useEffect(() => {
-  //   setInterval(() => {
-  //     let newLabels;
-  //     let newDataset;
+  useEffect(() => {
+    setInterval(async () => {
+      let newLabels;
+      let newDataset;
       
 
-  //     let values = updateData(labels, dataset, n);
-  //     newLabels = values[0];
-  //     newDataset = values[1];
+      let values = await updateData(labels, dataset, n);
+      newLabels = values[0];
+      newDataset = values[1];
 
-  //     // console.log(newLabels);
-  //     // console.log(newDataset);
-  //     // console.log(n);
+      // console.log(newLabels);
+      // console.log(newDataset);
+      // console.log(n);
 
-  //     setLabels(newLabels);
-  //     setDataset(newDataset);
-  //     n += 1;
-  //   }, 2000);
-  // }, []);
+      setLabels(newLabels);
+      setDataset(newDataset);
+      n += 1;
+    }, 3000);
+  }, []);
 
   const data = {
-    labels: labels,
+    labels: calculateLabel(labels),
     datasets: [{
       label: 'Dropped packets',
-      data: dataset[0],
+      data: calculateDataGraph(dataset[0]),
       fill: true,
       borderColor: 'red',
       tension: 0.1
     },
     {
       label: 'Forwarded packets',
-      data: dataset[1],
+      data: calculateDataGraph(dataset[1]),
       fill: true,
       borderColor: 'green',
       tension: 0.1
