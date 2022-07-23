@@ -1,3 +1,6 @@
-2022/07/22-16:11:17.656 3 Reusing MANIFEST /home/duong/Thesis/kubernetes-ddos-defence/src/kkdgui-server/~/Thesis/Default/Local Storage/leveldb/MANIFEST-000001
-2022/07/22-16:11:17.658 3 Recovering log #3
-2022/07/22-16:11:17.659 3 Reusing old log /home/duong/Thesis/kubernetes-ddos-defence/src/kkdgui-server/~/Thesis/Default/Local Storage/leveldb/000003.log 
+2022/07/22-18:39:52.621 3 Reusing MANIFEST /home/duong/Thesis/kubernetes-ddos-defence/src/kkdgui-server/~/Thesis/Default/Local Storage/leveldb/MANIFEST-000001
+2022/07/22-18:39:52.622 3 Recovering log #3
+2022/07/22-18:39:52.996 3 Reusing old log /home/duong/Thesis/kubernetes-ddos-defence/src/kkdgui-server/~/Thesis/Default/Local Storage/leveldb/000003.log 
+2022/07/22-18:56:43.037 9 Level-0 table #5: started
+2022/07/22-18:56:43.043 9 Level-0 table #5: 47153 bytes OK
+2022/07/22-18:56:43.049 9 Delete type=0 #3

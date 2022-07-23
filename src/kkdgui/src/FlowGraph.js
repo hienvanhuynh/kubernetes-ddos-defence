@@ -115,7 +115,7 @@ const getCurrentTotal = (data) => {
     sum += n;
   });
 
-  console.log('sum',sum);
+  //console.log('sum',sum);
 
   return sum;
 }
@@ -143,7 +143,7 @@ const updateData = async (labels, dataset, n) => {
   
   let forward_data = await fetch("/api/v1/query?query=cilium_forward_count_total");
   
-  console.log('drop raw', drop_data);
+  //console.log('drop raw', drop_data);
 
   const dropJson = await drop_data.json();
   const forwardJson = await forward_data.json();
@@ -165,7 +165,7 @@ const updateData = async (labels, dataset, n) => {
 }
 
 const calculateDataGraph = (data) => {
-  console.log('data', data);
+  //console.log('data', data);
   if (data.length < 2) {
    return [];
   }
@@ -184,8 +184,8 @@ const calculateLabel = (labels) => {
   const result = [...labels.slice(0, indexToRemove), ...labels.slice(indexToRemove + 1)];
   
   
-  console.log('labels', labels);
-  console.log('labels result', result);
+  //console.log('labels', labels);
+  //console.log('labels result', result);
   
   return result;	
 }
@@ -250,22 +250,27 @@ export default function FlowGraph() {
           Forward/Drop packets count
         </Typography>
 
-        <BasicSelect
+        {/* <BasicSelect
           defaultValue={'prometheus'}
           labelName="Namespace"
           optionList={['prometheus', 'kube-system']}
-        />
+        /> */}
 
       </Box>
       
 
       <Container>
         <Line
-          height={200}
+          height={500}
           width={300}
           data={data}
           options={{
             maintainAspectRatio: false,
+            elements: {
+                point:{
+                    radius: 0
+                }
+            }
           }}
         />
       </Container>

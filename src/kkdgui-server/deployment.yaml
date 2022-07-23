@@ -41,6 +41,7 @@ spec:
   ports:
     - port: 3007
       targetPort: 3005
+      nodePort: 30013
   selector:
-    app: kkd-server-gui
+    app: kkd-gui-server
 

@@ -11,21 +11,8 @@ import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { Box, Container } from '@mui/system';
 import OverflowTip from './component/overflowTip';
-import { Client1_13 } from 'kubernetes-client';
+const { exec } = require("child_process");
 
-//const client = new Client1_13({ version: '1.13' });
-
-const k8s = require('@kubernetes/client-node');
-
-const kc = new k8s.KubeConfig();
-kc.loadFromDefault();
-
-const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
-// const k8sNetworkingApi = kc.makeApiClient(k8s.NetworkingV1Api);
-
-k8sApi.listNamespacedPod('kube-system').then((res) => {
-  console.log('pod', res.body);
-});
 
 // k8sNetworkingApi.listNetworkPolicyForAllNamespaces().then((res => {
 //   console.log('policies', res);
@@ -79,10 +66,20 @@ const policy1 = {
 
 const getAllPolicies = async () => {
   // const policies = await client.apis.networking.k8s.io.v1.networkpolicies.get();
-  const policies = [policy1];
-  return policies;
+  const policiesResponse = await fetch('/apinode/getAllPolicies');
+  const policies = await policiesResponse.json();
+  console.log('getAllPolicies', policies);
+  
+  return policies.items;
 }
 
+const deletePolicyHandler = (name) => {
+  fetch(`/apinode/deletePolicy?name=${name}`)
+    .then(res => {
+      alert("Delete policy successfully!");
+      window.location.reload();
+    })
+}
 
 const convertJSONtoList = (json) =>
 {
@@ -98,15 +95,17 @@ const convertJSONtoList = (json) =>
 }
 
 const getDataFromPolicy = (policy) => {
-  let policyName = policy["items"][0].metadata.name;
+  console.log('policy', policy);
+  
+  let policyName = policy.metadata.name;
 
-  let creationTimestamp = policy["items"][0].metadata.creationTimestamp;
+  let creationTimestamp = policy.metadata.creationTimestamp;
 
-  let labelObject = policy["items"][0].spec.endpointSelector.matchLabels;
+  let labelObject = policy.spec.endpointSelector.matchLabels;
 
   let toLabels = convertJSONtoList(labelObject);
 
-  let ingressDeny = policy["items"][0].spec.ingressDeny;
+  let ingressDeny = policy.spec.ingressDeny;
 
   let fromLabels = [];
 
@@ -136,12 +135,15 @@ const getDataFromPolicy = (policy) => {
 
 export default function PolicyListAccordion() {
 
-  const [policies, setPolices] = React.useState([policy1]);
+  const [policies, setPolices] = React.useState([]);
 
-  React.useEffect(() => {
-    const policiesFetched = getAllPolicies();
-    console.log('policies', policiesFetched);
-    //setPolices(policiesFetched);
+
+  React.useEffect(async () => {
+    
+    const policiesFetched = await getAllPolicies();
+    console.log('policiesFetched', policiesFetched);
+    setPolices(policiesFetched);
+    console.log('actualpolicies', policies);
   }, []);
 
   //let policy = getDataFromPolicy(policy1);
@@ -154,6 +156,8 @@ export default function PolicyListAccordion() {
 
 
       {policies.map((policyRaw) => {
+      	console.log('policies', policies);
+      	 console.log('policyRaw', policyRaw);
         let policy = getDataFromPolicy(policyRaw);
         return (
         <Accordion>
@@ -248,8 +252,8 @@ export default function PolicyListAccordion() {
             justifyContent="center"
             alignItems="center"
           >
-            <Button variant="contained" color="error">
-              Deactivate
+            <Button variant="contained" color="error" onClick={() => deletePolicyHandler(policy.name)}>
+              Delete Policy
             </Button> 
           </Box>        
 
