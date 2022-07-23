@@ -42,7 +42,7 @@ echo "sum $sum periods $periods"
 
 [[ periods -eq 0 ]] && eval 'echo "No surge of drop traffic" ; exit'
 
-average=$((sum*8/periods/1024))
+average=$((sum*8/periods/1000))
 echo "$total_in_periods"
 echo "The average: $average Kbps, in $times s from $start_time to $end_time"
 
