@@ -14,6 +14,7 @@ import DetectorList from './DetectorList.js';
 import { Container } from '@mui/system';
 import AddCircle from '@mui/icons-material/AddCircle';
 import FlowGraph from './FlowGraph.js';
+import TextField from '@mui/material/TextField';
 
 
 function TabPanel(props) {
@@ -49,9 +50,19 @@ function a11yProps(index) {
   };
 }
 
+const addDetectorHandler = (name, imageName) => {
+  fetch(`/apinode/addDetector?name=${name}&imageName=${imageName}`)
+  .then(res => {
+    alert("Add Detector successfully!");
+    //window.location.reload();
+  })
+}
+
 export default function FullWidthTabs() {
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
+  const [name, setName] = React.useState(0);
+  const [imageName, setImageName] = React.useState(0);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -106,10 +117,19 @@ export default function FullWidthTabs() {
 
             <Grid item xs={3}>
               <DetectorList />
+              
+              
+	       <TextField id="outlined-basic" label="Detector Name" variant="outlined" 
+            onChange={(e) => setName(e.target.value)}
+            />
+	       <TextField id="outlined-basic" label="Image Name" variant="outlined"
+            onChange={(e) => setImageName(e.target.value)}
+            />
 
               <Button variant="contained" 
                 color="success"
                 size="large" startIcon={<AddCircle />}
+                onClick={() => addDetectorHandler(name, imageName)}
                 >
                 Add New Detector
               </Button>

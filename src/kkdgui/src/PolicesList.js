@@ -73,6 +73,13 @@ const getAllPolicies = async () => {
   return policies.items;
 }
 
+const deletePolicyHandler = (name) => {
+  fetch(`/apinode/deletePolicy?name=${name}`)
+    .then(res => {
+      alert("Delete policy successfully!");
+      window.location.reload();
+    })
+}
 
 const convertJSONtoList = (json) =>
 {
@@ -245,8 +252,8 @@ export default function PolicyListAccordion() {
             justifyContent="center"
             alignItems="center"
           >
-            <Button variant="contained" color="error">
-              Deactivate
+            <Button variant="contained" color="error" onClick={() => deletePolicyHandler(policy.name)}>
+              Delete Policy
             </Button> 
           </Box>        
 

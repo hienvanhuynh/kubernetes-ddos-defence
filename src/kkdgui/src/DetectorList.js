@@ -51,10 +51,9 @@ export default function DetectorList() {
             </ListItemIcon>
             <ListItemText 
               primary={<Typography variant="h6" style={{ color: 'green' }}>{name}</Typography>}
-              secondary="Added: 2 days ago"
             />
 
-            <Switch
+            {/* <Switch
               edge="end"
               onChange={handleToggle('wifi')}
               checked={checked.indexOf('wifi') !== -1}
@@ -62,7 +61,9 @@ export default function DetectorList() {
               inputProps={{
                 'aria-labelledby': 'switch-list-label-wifi',
               }}
-            />
+            /> */}
+
+
           </ListItem>
         )
       })}
