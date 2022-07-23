@@ -1,0 +1,9 @@
+version: "3.3"
+services:
+  kddgui:
+    image: "${REGISTRY}/kdd-gui-server"
+    container_name: kdd-gui-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: "host"

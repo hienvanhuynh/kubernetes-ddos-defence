@@ -1,0 +1,26 @@
+apiVersion: cilium.io/v2
+
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {...}
+  creationTimestamp: "2022-06-19T08:54:09Z"
+  generation: 1
+  name: blacklistaaa-rule0355
+  resourceVersion: "22477"
+  uid: a29617ce-dabc-44cc-a8d0-e93d41f8ae1f
+spec:
+  endpointSelector:
+    matchLabels:
+      app: myapp
+      io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name: default
+      io.cilium.k8s.policy.cluster: default
+      io.cilium.k8s.policy.serviceaccount: default
+      io.kubernetes.pod.namespace: default
+  ingress:
+  - fromEntities:
+    - all
+  ingressDeny:
+  - fromCIDR:
+    - 192.168.1.1/32
