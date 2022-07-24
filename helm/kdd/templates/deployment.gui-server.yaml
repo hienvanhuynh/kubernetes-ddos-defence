@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kkd-gui-server-deployment
+spec:
+  selector:
+    matchLabels:
+      app: kkd-gui-server
+  template:
+    metadata:
+      labels:
+        app: kkd-gui-server
+    spec:
+      serviceAccountName: kdd-admin
+      containers:
+      - image: nguyenduongag/kkd-gui-server
+        name: kkd-gui-server
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kkd-gui-server-service
+spec:
+  selector:
+    app: kkd-gui-server
+  ports:
+    - protocol: TCP
+      port: 3005
+      targetPort: 3005
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kkd-gui-server-nodeport
+  labels:
+    service: kkd-gui-server-service
+spec:
+  type: NodePort
+  ports:
+    - port: 3007
+      targetPort: 3005
+      nodePort: 30013
+  selector:
+    app: kkd-gui-server
+

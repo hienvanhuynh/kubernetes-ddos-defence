@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kkd-gui-deployment
+spec:
+  selector:
+    matchLabels:
+      app: kkd-gui
+  template:
+    metadata:
+      labels:
+        app: kkd-gui
+    spec:
+      serviceAccountName: kdd-admin
+      containers:
+      - image: nguyenduongag/kkd-gui
+        name: kkd-gui
+        imagePullPolicy: Always
+        env:
+        - name: NODE_IP
+          value: {{ required "Need to specify the IP of a node" .Values.nodeIP }}
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kkd-gui-nodeport
+  labels:
+    service: kkd-gui-service
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: kkd-gui
