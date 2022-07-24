@@ -217,7 +217,7 @@ spec:
 				}
 				policySpec += `
       `+ realLabel
-				fmt.Println(realLabel)
+				//fmt.Println(realLabel)
 			}
 		}
 		policySpec +=`
@@ -229,7 +229,7 @@ spec:
   - fromCIDR:`
 		externalIP := flow["IP"].(map[string]interface{})["source"].(string)
 		policySpec += `
-    - ` + externalIP
+    - ` + externalIP + `/32`
 	}
 	
 	if unidentifiedFlow == true {
@@ -245,10 +245,12 @@ spec:
 	
 	command := commandHeader + policySpec + `
 EOF`
-
-	out, _ := execBashCommand(command);
-	fmt.Println(out)
+	fmt.Println("Applying command:")
+	fmt.Println(command)
+	out, err := execBashCommand(command);
+	fmt.Println(out, err)
 }
+
 func getNumberOfCcnpInString() (numberOfCcnp string) {
 	numberOfCcnp, _ = execBashCommand("kubectl get ccnp | wc -l")
 	//remove unknown character (looks like a space char but it is not) in the last

@@ -34,15 +34,15 @@ func main() {
 	
 	var meanT float64 = 0
 	var standardDeviation float64 = 0
-	var alpha float64 = 0.08
+	var alpha float64 = 0.15
 
 	//In case stdDev is low, we use this number to keep it not too low
-	var standardDeviationBias float64 = 5
+	var standardDeviationBias float64 = 2
 	//Every user may as the same time increase 5 access, then we tolerate them
-	var tolerationTrafficIncreasementBias float64 = 5
+	//var tolerationTrafficIncreasementBias float64 = 5
 	//var numberOfDnsService = 1
 
-	var maxAttackHostsRatio float64 = 0.1
+	var maxAttackHostsRatio float64 = 0.2
 	//Usual traffic of a client
 	var R float64 = 0
 
@@ -94,7 +94,7 @@ func main() {
 			//lengthBefore := float64(len(mapFlow))
 			//mapFlows = filterMainTraffic(mapFlows)
 			mapFlows = filterMainTraffic(mapFlows)
-			//req.body is the input json
+
 			var T float64 = float64(len(mapFlows))
 			if savedPatchId == patchid || T == 0 {
 				fmt.Println("No new patch")
@@ -116,19 +116,22 @@ func main() {
 				}
 				//Phase 1 identify there are unexpected hight traffic
 				//save StandardDeviation for phase 1.1
-				tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
-				if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
-					tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
-				}
+				//tolerationTrafficIncreasement := standardDeviation / float64(numberOfFlow)
+				//if tolerationTrafficIncreasement < tolerationTrafficIncreasementBias {
+				//	tolerationTrafficIncreasement = tolerationTrafficIncreasementBias
+				//}
+			
 				newMeanT := meanT + alpha * (T - meanT)
 				newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
-				threshold := newMeanT + 3 * (newStandardDeviation + standardDeviationBias)
+				threshold := newMeanT + 3 * newStandardDeviation
 			
 				//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
 				//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
 				haveSuspected:=true
-				//check if T is not exceed the threshold and also check if the increasing of traffic is not purely caused by increase number of clients
-				if (T <= threshold || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)) {
+				//check if T is not exceed the threshold
+				// Possibly and also check if the increasing of traffic is not purely caused by increase number of clients
+				// || T <= float64(numberOfFlow) * (R + tolerationTrafficIncreasement)
+				if T <= threshold {
 					//
 					meanT = newMeanT
 					standardDeviation = newStandardDeviation

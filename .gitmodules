@@ -1,0 +1,3 @@
+[submodule "sample-src/python-attacker/ihulk.py"]
+	path = sample-src/python-attacker/ihulk.py
+	url = https://github.com/iamaamir/ihulk.py.git
