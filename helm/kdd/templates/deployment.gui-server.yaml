@@ -1,3 +1,4 @@
+{{- if .Values.kddui.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,4 +45,4 @@ spec:
       nodePort: 30013
   selector:
     app: kkd-gui-server
-
+{{- end }}
