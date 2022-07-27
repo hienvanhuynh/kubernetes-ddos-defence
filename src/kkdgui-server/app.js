@@ -1,5 +1,6 @@
 const cors = require('cors');
 const express = require('express')
+const fs = require('fs')
 const app = express()
 const port = 3005
 app.use(cors({origin: "*",}));
@@ -27,6 +28,18 @@ const k8sNetworkApi = kc.makeApiClient(k8s.NetworkingV1Api);
 
 const addDetectorCommand = 'cat detetorDeployment.yaml | sed "s/{{DETECTOR_NAME}}/$DETECTOR_NAME/g" | sed "s/{{IMAGE_NAME}}/$IMAGE_NAME/g" | kubectl apply -f -';
 
+
+const getDetectorYaml = (name, imageURL) => {
+  const DETECTOR_NAME = name;
+  const IMAGE_NAME = imageURL;
+
+  const fs = require('fs')
+
+  const fileContents = fs.readFileSync('./detetorDeployment.yaml').toString();
+  console.log(fileContents);
+}
+
+
 app.get('/apinode/addDetector', async (req, res) => {
 
   const name = req.query.name;
@@ -35,17 +48,19 @@ app.get('/apinode/addDetector', async (req, res) => {
   console.log('imageName', imageName);
   console.log('name', name);
 
-  await exec(`export DETECTOR_NAME=name1`);
-  await exec(`export IMAGE_NAME=image2`);
+  await exec(`export DETECTOR_NAME='${name}'`);
+  await exec(`export IMAGE_NAME='${imageName}'`);
   
   const { stdout, stderr } = await exec('echo $IMAGE_NAME');
   console.log('echo', stdout);
   
-  await exec(`cat detetorDeployment.yaml | sed "s/{{DETECTOR_NAME}}/${name}/g" | sed "s/{{IMAGE_NAME}}/${imageName}/g" | kubectl apply -f -`);
-  
+  await exec(`cat detetorDeployment.yaml | sed "s|{{DETECTOR_NAME}}|${name}|g" | sed "s|{{IMAGE_NAME}}|${imageName}|g" | kubectl apply -f -`);
+  //await exec(`envsubst < detetorDeployment.yaml | kubectl apply -f -`);
+
 
   res.status(200).send();
 });
+
 
 app.get('/apinode/deletePolicy', async (req, res) => {
 
@@ -91,7 +106,6 @@ app.get('/apinode/getDetectors', async (req, res) => {
 
 app.get('/', (req, res) => {
   console.log('run');
-  res.send('Hello World!')
 })
 
 app.listen(port, () => {
