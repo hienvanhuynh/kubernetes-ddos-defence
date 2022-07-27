@@ -164,6 +164,8 @@ const updateData = async (labels, dataset, n) => {
 
 }
 
+const MAX_GRAPH_LENGTH = 40;
+
 const calculateDataGraph = (data) => {
   //console.log('data', data);
   if (data.length < 2) {
@@ -175,7 +177,7 @@ const calculateDataGraph = (data) => {
     newData.push(data[i]-data[i-1]);
   }
   
-  return newData;
+  return newData.slice(-MAX_GRAPH_LENGTH);
 }
 
 const calculateLabel = (labels) => {
@@ -187,7 +189,7 @@ const calculateLabel = (labels) => {
   //console.log('labels', labels);
   //console.log('labels result', result);
   
-  return result;	
+  return result.slice(-MAX_GRAPH_LENGTH);	
 }
 
 
@@ -216,7 +218,7 @@ export default function FlowGraph() {
       setLabels(newLabels);
       setDataset(newDataset);
       n += 1;
-    }, 3000);
+    }, 2000);
   }, []);
 
   const data = {

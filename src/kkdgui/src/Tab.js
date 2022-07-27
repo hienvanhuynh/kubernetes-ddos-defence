@@ -118,21 +118,30 @@ export default function FullWidthTabs() {
             <Grid item xs={3}>
               <DetectorList />
               
+              <Box
+                display="flex"
+                alignItems="center"
+                marginTop={2}
+              >
               
-	       <TextField id="outlined-basic" label="Detector Name" variant="outlined" 
-            onChange={(e) => setName(e.target.value)}
-            />
-	       <TextField id="outlined-basic" label="Image Name" variant="outlined"
-            onChange={(e) => setImageName(e.target.value)}
-            />
+              
+                <TextField id="outlined-basic" label="Detector Name" variant="outlined" 
+                    onChange={(e) => setName(e.target.value)}
+                    />
+                <TextField id="outlined-basic" label="Image URL" variant="outlined"
+                    onChange={(e) => setImageName(e.target.value)}
+                    />
 
-              <Button variant="contained" 
-                color="success"
-                size="large" startIcon={<AddCircle />}
-                onClick={() => addDetectorHandler(name, imageName)}
-                >
-                Add New Detector
-              </Button>
+                <Button variant="contained" 
+                  color="success"
+                  size="large" startIcon={<AddCircle />}
+                  onClick={() => addDetectorHandler(name, imageName)}
+                  >
+                  Add New Detector
+                </Button>
+
+              </Box>
+
             </Grid>   
           
           </Grid> 
