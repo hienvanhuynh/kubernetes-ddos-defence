@@ -33,6 +33,8 @@ scraper:
 # Deprecated, replace by new GUI component
 kddui:
   enabled: false
+  deprecated:
+    enabled: false
   service:
     type: NodePort
     nodePort: 32080

@@ -1,4 +1,4 @@
-{{- if .Values.kddui.enabled }}
+{{- if .Values.kddui.deprecated.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
