@@ -37,7 +37,7 @@ func main() {
 	var alpha float64 = 0.15
 
 	//In case stdDev is low, we use this number to keep it not too low
-	var standardDeviationBias float64 = 2
+	//var standardDeviationBias float64 = 2
 	//Every user may as the same time increase 5 access, then we tolerate them
 	//var tolerationTrafficIncreasementBias float64 = 5
 	//var numberOfDnsService = 1
@@ -123,10 +123,11 @@ func main() {
 			
 				newMeanT := meanT + alpha * (T - meanT)
 				newStandardDeviation := math.Sqrt(alpha * math.Pow(T - meanT, 2) + (1 - alpha)*math.Pow(standardDeviation, 2))
-				threshold := newMeanT + 3 * newStandardDeviation
+				//threshold := newMeanT + 3 * newStandardDeviation
+				threshold := meanT + 3 * standardDeviation
 			
 				//fmt.Println("meanT:", meanT, "stdDev:",standardDeviation,"threshold: ", threshold)
-				//fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
+				fmt.Println("meanT:", meanT, "T:", T, "threshold:", threshold)
 				haveSuspected:=true
 				//check if T is not exceed the threshold
 				// Possibly and also check if the increasing of traffic is not purely caused by increase number of clients
