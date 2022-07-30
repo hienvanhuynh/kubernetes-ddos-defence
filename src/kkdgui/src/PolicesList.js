@@ -99,6 +99,15 @@ const getDataFromPolicy = (policy) => {
   
   let policyName = policy.metadata.name;
 
+  if(!policyName.startsWith("black-list"){
+    
+    return {
+    "name":policyName,
+    "fromLabels":[],
+    "toLabels": []
+   }
+  }
+
   let creationTimestamp = policy.metadata.creationTimestamp;
 
   let labelObject = policy.spec.endpointSelector.matchLabels;
